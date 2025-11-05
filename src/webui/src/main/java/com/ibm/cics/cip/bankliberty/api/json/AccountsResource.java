@@ -82,10 +82,6 @@ public class AccountsResource extends HBankDataAccess
 
 	private static final String INTEREST_RATE_TOO_HIGH = "Interest rate cannot be greater than 9999.99%.";
 
-	private static final String GET_ACCOUNTS_EXTERNAL = "getAccountsExternal(Boolean countOnly)";
-
-	private static final String GET_ACCOUNTS_INTERNAL = "getAccountsInternal(Boolean countOnly)";
-
 	private static final String NOT_VALID_FOR_THIS_BANK = "not valid for this bank (";
 
 	private static final String SORT_CODE_LITERAL = "Sortcode ";
@@ -1628,8 +1624,8 @@ public class AccountsResource extends HBankDataAccess
 
 		if(newAccount == null)
 		{
-			error.put(JSON_ERROR_MSG, "Account "+ IS_NULL);
-			logger.log(Level.WARNING, () -> "Account " + IS_NULL);
+			error.put(JSON_ERROR_MSG, ACCOUNT_LITERAL + IS_NULL);
+			logger.log(Level.WARNING, () -> ACCOUNT_LITERAL + IS_NULL);
 			return error;
 		}
 
