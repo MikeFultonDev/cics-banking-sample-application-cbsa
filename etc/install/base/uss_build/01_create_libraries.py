@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 CBSA Library Creation Script
-Equivalent to CRELIBS.jcl - Creates all necessary datasets/libraries
+Creates only the necessary MVS datasets for VSAM files
+Note: Source files, object files, and DBRMs remain in USS
 """
 
 import sys
@@ -10,93 +11,23 @@ from cbsa_utils import BuildConfig, MVSCommand, print_banner, print_step, check_
 
 
 def create_libraries(config: BuildConfig, verbose: bool = False) -> bool:
-    """Create all required CBSA libraries"""
+    """Create only required CBSA libraries (VSAM-related only)"""
     
     print_banner("CBSA Library Creation")
     
-    # Define all libraries to create
-    libraries = [
-        {
-            'name': config.get('DB2_JCL_INSTALL'),
-            'desc': 'DB2 JCL Installation Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(5,2,20)'
-        },
-        {
-            'name': config.get('BUILD_JCL'),
-            'desc': 'Build JCL Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(10,5,50)'
-        },
-        {
-            'name': config.get('LOADLIB'),
-            'desc': 'Load Module Library',
-            'recfm': 'U',
-            'lrecl': 0,
-            'blksize': 32760,
-            'space': 'CYL(50,10,100)'
-        },
-        {
-            'name': config.get('DBRM'),
-            'desc': 'DBRM Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(10,5,50)'
-        },
-        {
-            'name': config.get('LKED'),
-            'desc': 'Link Edit Source Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(5,2,20)'
-        },
-        {
-            'name': config.get('BMS'),
-            'desc': 'BMS Map Source Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(5,2,20)'
-        },
-        {
-            'name': config.get('ASM'),
-            'desc': 'Assembler Source Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(2,1,10)'
-        },
-        {
-            'name': config.get('CBSAMOD'),
-            'desc': 'COBOL Object Module Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(20,10,50)'
-        },
-        {
-            'name': config.get('COBOL'),
-            'desc': 'COBOL Source Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(10,5,50)'
-        },
-        {
-            'name': config.get('DSECT'),
-            'desc': 'Copybook/DSECT Library',
-            'recfm': 'FB',
-            'lrecl': 80,
-            'blksize': 27920,
-            'space': 'CYL(5,2,20)'
-        }
-    ]
+    print("Note: With USS-based build system, only VSAM-related datasets are needed.")
+    print("Source files, object files, and DBRMs remain in USS file system.\n")
+    
+    # Only create libraries that are actually needed for VSAM files
+    # All compilation artifacts (source, objects, DBRMs, load modules) stay in USS
+    libraries = []
+    
+    # Check if we need any MVS datasets at all
+    # For a pure USS build, we might not need any
+    if not libraries:
+        print("✓ No MVS datasets required for USS-based build")
+        print("  All build artifacts will be in USS under build/ directory")
+        return True
     
     success_count = 0
     fail_count = 0
@@ -126,92 +57,37 @@ def create_libraries(config: BuildConfig, verbose: bool = False) -> bool:
     return fail_count == 0
 
 
-def copy_source_files(config: BuildConfig, verbose: bool = False) -> bool:
-    """Copy source files from USS to MVS datasets"""
+def setup_uss_directories(config: BuildConfig, verbose: bool = False) -> bool:
+    """Create USS build directories"""
     
-    print_banner("Copying Source Files to Datasets")
+    print_banner("Setting Up USS Build Directories")
     
-    # Define source to target mappings
-    mappings = [
-        {
-            'source_dir': 'src/base/cobol_src',
-            'target_ds': config.get('COBOL'),
-            'pattern': '*.cbl',
-            'desc': 'COBOL source files'
-        },
-        {
-            'source_dir': 'src/base/cobol_copy',
-            'target_ds': config.get('DSECT'),
-            'pattern': '*.cpy',
-            'desc': 'COBOL copybooks'
-        },
-        {
-            'source_dir': 'src/base/bms_src',
-            'target_ds': config.get('BMS'),
-            'pattern': '*.bms',
-            'desc': 'BMS map source'
-        },
-        {
-            'source_dir': 'etc/install/base/linkeditjcl',
-            'target_ds': config.get('LKED'),
-            'pattern': '*.lked',
-            'desc': 'Link edit control cards'
-        },
-        {
-            'source_dir': 'etc/install/base/buildjcl',
-            'target_ds': config.get('BUILD_JCL'),
-            'pattern': '*.jcl',
-            'desc': 'Build JCL members'
-        },
-        {
-            'source_dir': 'etc/install/base/db2jcl',
-            'target_ds': config.get('DB2_JCL_INSTALL'),
-            'pattern': '*.jcl',
-            'desc': 'DB2 JCL members'
-        }
+    # Create build directories in USS
+    directories = [
+        'build',
+        'build/obj',
+        'build/load',
+        'build/dbrm',
+        'build/dsect',
+        'build/bind'
     ]
     
     success_count = 0
     fail_count = 0
     
-    for i, mapping in enumerate(mappings, 1):
-        print_step(i, f"Copying {mapping['desc']}")
-        print(f"From: {mapping['source_dir']}")
-        print(f"To:   {mapping['target_ds']}")
+    for i, directory in enumerate(directories, 1):
+        print_step(i, f"Creating directory: {directory}")
         
-        source_dir = mapping['source_dir']
-        if not os.path.exists(source_dir):
-            print(f"⚠ Source directory not found: {source_dir}")
-            continue
-        
-        # Get list of files matching pattern
-        import glob
-        pattern = os.path.join(source_dir, mapping['pattern'])
-        files = glob.glob(pattern)
-        
-        if not files:
-            print(f"⚠ No files found matching pattern: {pattern}")
-            continue
-        
-        print(f"Found {len(files)} files to copy")
-        
-        for file_path in files:
-            # Extract member name (filename without extension)
-            member = os.path.splitext(os.path.basename(file_path))[0].upper()
-            
-            if verbose:
-                print(f"  Copying {os.path.basename(file_path)} -> {member}")
-            
-            if MVSCommand.copy_member(file_path, mapping['target_ds'], member, verbose):
-                success_count += 1
-            else:
-                print(f"  ✗ Failed to copy {file_path}")
-                fail_count += 1
-        
-        print(f"✓ Completed copying {mapping['desc']}")
+        try:
+            os.makedirs(directory, exist_ok=True)
+            print(f"✓ Created {directory}")
+            success_count += 1
+        except Exception as e:
+            print(f"✗ Failed to create {directory}: {e}")
+            fail_count += 1
     
     print(f"\n{'='*60}")
-    print(f"Summary: {success_count} files copied, {fail_count} failed")
+    print(f"Summary: {success_count} directories created, {fail_count} failed")
     print(f"{'='*60}\n")
     
     return fail_count == 0
@@ -221,11 +97,9 @@ def main():
     """Main execution"""
     import argparse
     
-    parser = argparse.ArgumentParser(description='Create CBSA libraries and copy source files')
+    parser = argparse.ArgumentParser(description='Setup CBSA USS build environment')
     parser.add_argument('-c', '--config', default='build.conf', help='Configuration file')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
-    parser.add_argument('--skip-copy', action='store_true', help='Skip copying source files')
-    parser.add_argument('--copy-only', action='store_true', help='Only copy files, skip library creation')
     
     args = parser.parse_args()
     
@@ -240,19 +114,22 @@ def main():
         print(f"ERROR: Failed to load configuration: {e}")
         return 1
     
-    # Create libraries
-    if not args.copy_only:
-        if not create_libraries(config, args.verbose):
-            print("ERROR: Library creation failed")
-            return 1
+    # Create MVS libraries (if any are needed)
+    if not create_libraries(config, args.verbose):
+        print("ERROR: Library creation failed")
+        return 1
     
-    # Copy source files
-    if not args.skip_copy:
-        if not copy_source_files(config, args.verbose):
-            print("ERROR: Source file copy failed")
-            return 1
+    # Setup USS directories
+    if not setup_uss_directories(config, args.verbose):
+        print("ERROR: USS directory setup failed")
+        return 1
     
-    print("\n✓ Library creation and setup completed successfully!")
+    print("\n✓ USS build environment setup completed successfully!")
+    print("\nNext steps:")
+    print("  1. Run 'make setup-db2' to create DB2 artifacts")
+    print("  2. Run 'make compile' to compile programs")
+    print("  3. Run 'make bind' to bind to DB2")
+    print("  4. Run 'make populate' to populate data")
     return 0
 
 

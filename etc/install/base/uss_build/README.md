@@ -34,13 +34,11 @@ uss_build/
 ├── README.md                    # This file
 ├── build.conf                   # Configuration file
 ├── Makefile                     # Main build orchestration
-├── compile.mk                   # COBOL compilation Makefile (NEW)
-├── bind.mk                      # DB2 binding Makefile (NEW)
+├── compile.mk                   # COBOL compilation Makefile
+├── bind.mk                      # DB2 binding Makefile
 ├── cbsa_utils.py               # Common utility functions
 ├── 01_create_libraries.py      # Create MVS libraries
 ├── 02_setup_db2.py             # Setup DB2 artifacts
-├── 03_compile_programs.py      # Legacy Python compilation script (deprecated)
-├── 04_bind_db2.py              # Legacy Python binding script (deprecated)
 ├── 05_populate_data.py         # Create VSAM files and populate data
 └── build/                       # Build output directory (created automatically)
     ├── obj/                     # Object files (.o)
@@ -50,11 +48,9 @@ uss_build/
     └── bind/                    # DB2 bind tracking and SQL scripts
 ```
 
-**Note**: The build system now uses native Makefiles:
-- [`compile.mk`](compile.mk:1) for incremental COBOL compilation
-- [`bind.mk`](bind.mk:1) for incremental DB2 binding
-
-The Python scripts [`03_compile_programs.py`](03_compile_programs.py:1) and [`04_bind_db2.py`](04_bind_db2.py:1) are retained for backward compatibility but are no longer used by default.
+**Note**: The build system uses native Makefiles for compilation and binding:
+- [`compile.mk`](compile.mk:1) - Incremental COBOL compilation with dependency tracking
+- [`bind.mk`](bind.mk:1) - Incremental DB2 binding with DBRM dependencies
 
 ## Quick Start
 

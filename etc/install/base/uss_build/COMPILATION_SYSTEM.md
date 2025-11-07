@@ -34,11 +34,11 @@ The main [`Makefile`](Makefile:1) now includes both [`compile.mk`](compile.mk:1)
 - `make bind-packages` → binds DB2 packages only
 - Individual operations: `make build/load/PROGRAM` or `make build/bind/PROGRAM.pkg`
 
-### 4. Deprecated Scripts
+### 4. Removed Scripts
 
-The Python scripts are retained for backward compatibility but are no longer used by default:
-- [`03_compile_programs.py`](03_compile_programs.py:1) - Use [`compile.mk`](compile.mk:1) instead
-- [`04_bind_db2.py`](04_bind_db2.py:1) - Use [`bind.mk`](bind.mk:1) instead
+The Python scripts for compilation and binding have been removed:
+- `03_compile_programs.py` - Replaced by [`compile.mk`](compile.mk:1)
+- `04_bind_db2.py` - Replaced by [`bind.mk`](bind.mk:1)
 
 ## Build Directory Structure
 
