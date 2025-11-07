@@ -152,11 +152,10 @@ These are expected and will not occur when running on z/OS with ZOAU installed.
 - [x] Refactor MVSCommand.run_tso() to use mvscmd
 - [x] Refactor MVSCommand.allocate_dataset() to use datasets.create()
 - [x] Refactor MVSCommand.allocate_pds() to use datasets.create()
-- [x] Refactor MVSCommand.copy_member() to use datasets.write()
-- [x] Refactor CobolCompiler.compile_program() to use USS cob2 command
 - [x] Refactor DB2Utilities.execute_sql() to use mvscmd.execute()
 - [x] Update check_prerequisites() to verify ZOAU availability
-- [x] Update API to use USS file paths instead of dataset names for compilation
+- [x] Remove unused MVSCommand.copy_member() method
+- [x] Remove unused CobolCompiler class (compilation handled by makefiles using cob2)
 - [x] Document all changes
 
 ## API Changes

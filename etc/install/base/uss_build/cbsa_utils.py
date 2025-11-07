@@ -12,12 +12,11 @@ import subprocess
 from typing import Dict, List, Optional, Tuple
 
 # Import ZOAU modules
-from zoautil_py import datasets, jobs, mvscmd
+from zoautil_py import datasets, mvscmd
 from zoautil_py.ztypes import ZOAUResponse, DDStatement, DatasetDefinition, FileDefinition
 from zoautil_py.exceptions import (
     DatasetCreateException,
     DatasetWriteException,
-    JobSubmitException,
     ZOAUException
 )
 
@@ -208,142 +207,6 @@ class MVSCommand:
             if verbose:
                 print(f"Error allocating PDS: {e}")
             return False
-    
-    @staticmethod
-    def copy_member(source_file: str, target_ds: str, member: str, verbose: bool = False) -> bool:
-        """Copy a USS file to a PDS member using ZOAU"""
-        if verbose:
-            print(f"Copying {source_file} to {target_ds}({member})")
-        
-        try:
-            # Read the USS file
-            with open(source_file, 'r') as f:
-                content = f.read()
-            
-            # Write to the dataset member using ZOAU
-            target_member = f"{target_ds}({member})"
-            datasets.write(target_member, content, verbose=verbose)
-            
-            if verbose:
-                print(f"Successfully copied to {target_member}")
-            
-            return True
-        except DatasetWriteException as e:
-            if verbose:
-                print(f"Failed to copy member: {e}")
-            return False
-        except Exception as e:
-            if verbose:
-                print(f"Copy error: {e}")
-            return False
-
-
-class CobolCompiler:
-    """COBOL compilation utilities using USS cob2 command"""
-    
-    def __init__(self, config: BuildConfig):
-        self.config = config
-    
-    def compile_program(self, program: str, source_file: str, output_file: str,
-                       copylib_paths: List[str], dbrm_dir: Optional[str] = None,
-                       verbose: bool = False) -> bool:
-        """
-        Compile a COBOL program using USS cob2 command
-        
-        Args:
-            program: Program name (without extension)
-            source_file: Path to source file (e.g., 'src/base/cobol_src/PROG.cbl')
-            output_file: Path to output object file (e.g., 'build/obj/PROG.o')
-            copylib_paths: List of paths to search for copybooks
-            dbrm_dir: Directory for DBRM output (optional)
-            verbose: Enable verbose output
-        """
-        if verbose:
-            print(f"Compiling COBOL program: {program}")
-            print(f"  Source: {source_file}")
-            print(f"  Output: {output_file}")
-        
-        # Build cob2 command
-        cmd = ['cob2']
-        
-        # Add compiler options
-        options = [
-            '-qCICS',           # Enable CICS support
-            '-qSQL',            # Enable SQL support
-            '-qNODYNAM',        # No dynamic calls
-            '-qRENT',           # Reentrant code
-            '-qAPOST',          # Use apostrophes for literals
-            '-qOPTIMIZE(2)',    # Optimization level
-            '-qTRUNC(OPT)',     # Truncation optimization
-            '-c',               # Compile only (no link)
-        ]
-        
-        # Add copybook search paths
-        for copylib in copylib_paths:
-            options.append(f'-I{copylib}')
-        
-        # Add DBRM output directory if specified
-        if dbrm_dir:
-            options.append(f'-qDBRM')
-            # cob2 will create DBRM in current directory, we'll move it later
-        
-        # Add output file specification
-        options.append(f'-o{output_file}')
-        
-        # Add all options to command
-        cmd.extend(options)
-        
-        # Add source file
-        cmd.append(source_file)
-        
-        if verbose:
-            print(f"Executing: {' '.join(cmd)}")
-        
-        try:
-            # Execute cob2 command
-            import subprocess
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-            
-            if verbose or result.returncode != 0:
-                if result.stdout:
-                    print(f"STDOUT:\n{result.stdout}")
-                if result.stderr:
-                    print(f"STDERR:\n{result.stderr}")
-            
-            if result.returncode != 0:
-                if verbose:
-                    print(f"Compilation failed with return code: {result.returncode}")
-                return False
-            
-            # Move DBRM file if DB2 compilation was requested
-            if dbrm_dir and os.path.exists(f"{program}.dbrm"):
-                dbrm_target = os.path.join(dbrm_dir, f"{program}.dbrm")
-                os.rename(f"{program}.dbrm", dbrm_target)
-                if verbose:
-                    print(f"DBRM moved to: {dbrm_target}")
-            
-            if verbose:
-                print(f"✓ Compilation successful: {output_file}")
-            
-            return True
-            
-        except subprocess.TimeoutExpired:
-            if verbose:
-                print("Compilation timed out")
-            return False
-        except FileNotFoundError:
-            if verbose:
-                print("ERROR: cob2 command not found. Ensure COBOL compiler is in PATH.")
-            return False
-        except Exception as e:
-            if verbose:
-                print(f"Compilation error: {e}")
-            return False
 
 
 class DB2Utilities:
@@ -382,7 +245,7 @@ END
             # Define DD statements for IKJEFT01
             dds = [
                 DDStatement('SYSTSPRT', DatasetDefinition('*', disposition='NEW')),
-                DDStatement('SYSTSIN', FileDefinition(temp_systsin,
+                DDStatement('SYSTSIN', FileDefinition(temp_systsin, 
                                                       normal_disposition='SHR',
                                                       status_group='OLD')),
                 DDStatement('SYSPRINT', DatasetDefinition('*', disposition='NEW')),
