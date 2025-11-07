@@ -2,13 +2,24 @@
 """
 CBSA Build Utilities
 Common functions for CBSA USS-based build system
+Refactored to use Z Open Automation Utilities (ZOAU) Python interfaces
 """
 
 import os
 import sys
-import subprocess
 import re
+import subprocess
 from typing import Dict, List, Optional, Tuple
+
+# Import ZOAU modules
+from zoautil_py import datasets, jobs, mvscmd
+from zoautil_py.ztypes import ZOAUResponse, DDStatement, DatasetDefinition, FileDefinition
+from zoautil_py.exceptions import (
+    DatasetCreateException,
+    DatasetWriteException,
+    JobSubmitException,
+    ZOAUException
+)
 
 
 class BuildConfig:
@@ -66,97 +77,161 @@ class BuildConfig:
 
 
 class MVSCommand:
-    """Execute MVS commands via TSO"""
+    """Execute MVS commands using ZOAU"""
     
     @staticmethod
     def run_tso(command: str, verbose: bool = False) -> Tuple[int, str, str]:
-        """Execute a TSO command"""
+        """Execute a TSO command using ZOAU mvscmd"""
         if verbose:
             print(f"Executing TSO: {command}")
         
         try:
-            result = subprocess.run(
-                ['tsocmd', command],
-                capture_output=True,
-                text=True,
-                timeout=300
+            # Use ZOAU mvscmd to execute TSO commands
+            response = mvscmd.execute(
+                pgm="IKJEFT01",
+                pgm_args=command,
+                verbose=verbose
             )
             
             if verbose:
-                if result.stdout:
-                    print(f"STDOUT:\n{result.stdout}")
-                if result.stderr:
-                    print(f"STDERR:\n{result.stderr}")
+                if response.stdout_response:
+                    print(f"STDOUT:\n{response.stdout_response}")
+                if response.stderr_response:
+                    print(f"STDERR:\n{response.stderr_response}")
             
-            return result.returncode, result.stdout, result.stderr
-        except subprocess.TimeoutExpired:
-            return 1, "", "Command timed out"
-        except FileNotFoundError:
-            return 1, "", "tsocmd not found - ensure you're running in USS environment"
+            return response.rc, response.stdout_response, response.stderr_response
+        except ZOAUException as e:
+            if verbose:
+                print(f"ZOAU Exception: {e}")
+            return e.response.rc, e.response.stdout_response, e.response.stderr_response
         except Exception as e:
             return 1, "", str(e)
     
     @staticmethod
     def allocate_dataset(dsname: str, params: Dict[str, str], verbose: bool = False) -> bool:
-        """Allocate a dataset using IDCAMS"""
-        # Build DEFINE command
-        define_cmd = f"DEFINE CLUSTER(NAME({dsname})"
+        """Allocate a dataset using ZOAU datasets.create"""
+        if verbose:
+            print(f"Allocating dataset: {dsname}")
         
-        for key, value in params.items():
-            define_cmd += f" {key}({value})"
-        
-        define_cmd += ")"
-        
-        # Create IDCAMS control cards
-        control_cards = f"""
-  DELETE {dsname}
-  SET MAXCC=0
-  {define_cmd}
-"""
-        
-        # Write to temporary file
-        temp_file = f"/tmp/idcams_{os.getpid()}.txt"
         try:
-            with open(temp_file, 'w') as f:
-                f.write(control_cards)
+            # Delete if exists
+            if datasets.exists(dsname):
+                datasets.delete(dsname, verbose=verbose)
             
-            # Execute IDCAMS
-            cmd = f"IDCAMS <{temp_file}"
-            rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
+            # Map parameters to ZOAU create parameters
+            dataset_type = params.get('TYPE', 'SEQ')
             
-            return rc == 0
-        finally:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+            # Build kwargs for ZOAU create
+            create_kwargs = {
+                'verbose': verbose
+            }
+            
+            # Map common parameters
+            if 'RECFM' in params:
+                create_kwargs['record_format'] = params['RECFM']
+            if 'LRECL' in params:
+                create_kwargs['record_length'] = int(params['LRECL'])
+            if 'BLKSIZE' in params:
+                create_kwargs['block_size'] = int(params['BLKSIZE'])
+            if 'SPACE' in params:
+                # Parse space parameter (e.g., "CYL(10,5)")
+                space_match = re.match(r'(\w+)\((\d+),(\d+)\)', params['SPACE'])
+                if space_match:
+                    unit, primary, secondary = space_match.groups()
+                    create_kwargs['space_primary'] = int(primary)
+                    create_kwargs['space_secondary'] = int(secondary)
+                    create_kwargs['space_type'] = unit.lower()
+            if 'VOLUMES' in params:
+                create_kwargs['volumes'] = params['VOLUMES']
+            
+            # Create the dataset
+            datasets.create(dsname, dataset_type, **create_kwargs)
+            
+            if verbose:
+                print(f"Dataset {dsname} allocated successfully")
+            
+            return True
+        except DatasetCreateException as e:
+            if verbose:
+                print(f"Failed to allocate dataset: {e}")
+            return False
+        except Exception as e:
+            if verbose:
+                print(f"Error allocating dataset: {e}")
+            return False
     
     @staticmethod
     def allocate_pds(dsname: str, recfm: str = "FB", lrecl: int = 80, 
                      blksize: int = 27920, space: str = "CYL(10,5,20)", 
                      verbose: bool = False) -> bool:
-        """Allocate a PDS/PDSE"""
-        cmd = f"ALLOCATE DATASET('{dsname}') NEW CATALOG DSORG(PO) RECFM({recfm}) LRECL({lrecl}) BLKSIZE({blksize}) SPACE({space}) DSNTYPE(LIBRARY)"
-        
+        """Allocate a PDS/PDSE using ZOAU"""
         if verbose:
             print(f"Allocating PDS: {dsname}")
         
-        rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
-        return rc == 0
+        try:
+            # Delete if exists
+            if datasets.exists(dsname):
+                datasets.delete(dsname, verbose=verbose)
+            
+            # Parse space parameter
+            space_match = re.match(r'(\w+)\((\d+),(\d+)(?:,(\d+))?\)', space)
+            if not space_match:
+                if verbose:
+                    print(f"Invalid space parameter: {space}")
+                return False
+            
+            unit, primary, secondary, directory = space_match.groups()
+            
+            # Create PDS using ZOAU
+            datasets.create(
+                dsname,
+                'PDSE',  # Use PDSE (modern PDS)
+                record_format=recfm,
+                record_length=lrecl,
+                block_size=blksize,
+                space_primary=int(primary),
+                space_secondary=int(secondary),
+                space_type=unit.lower(),
+                directory_blocks=int(directory) if directory else 20,
+                verbose=verbose
+            )
+            
+            if verbose:
+                print(f"PDS {dsname} allocated successfully")
+            
+            return True
+        except DatasetCreateException as e:
+            if verbose:
+                print(f"Failed to allocate PDS: {e}")
+            return False
+        except Exception as e:
+            if verbose:
+                print(f"Error allocating PDS: {e}")
+            return False
     
     @staticmethod
     def copy_member(source_file: str, target_ds: str, member: str, verbose: bool = False) -> bool:
-        """Copy a USS file to a PDS member"""
+        """Copy a USS file to a PDS member using ZOAU"""
         if verbose:
             print(f"Copying {source_file} to {target_ds}({member})")
         
         try:
-            # Use cp command with MVS dataset syntax
-            cmd = ['cp', '-F', 'record', source_file, f"//'{ target_ds}({member})'"]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Read the USS file
+            with open(source_file, 'r') as f:
+                content = f.read()
             
-            if verbose and result.returncode != 0:
-                print(f"Copy failed: {result.stderr}")
+            # Write to the dataset member using ZOAU
+            target_member = f"{target_ds}({member})"
+            datasets.write(target_member, content, verbose=verbose)
             
-            return result.returncode == 0
+            if verbose:
+                print(f"Successfully copied to {target_member}")
+            
+            return True
+        except DatasetWriteException as e:
+            if verbose:
+                print(f"Failed to copy member: {e}")
+            return False
         except Exception as e:
             if verbose:
                 print(f"Copy error: {e}")
@@ -164,132 +239,196 @@ class MVSCommand:
 
 
 class CobolCompiler:
-    """COBOL compilation utilities"""
+    """COBOL compilation utilities using USS cob2 command"""
     
     def __init__(self, config: BuildConfig):
         self.config = config
     
-    def compile_program(self, program: str, source_ds: str, output_ds: str, 
-                       copylib_ds: str, dbrm_ds: Optional[str] = None,
+    def compile_program(self, program: str, source_file: str, output_file: str,
+                       copylib_paths: List[str], dbrm_dir: Optional[str] = None,
                        verbose: bool = False) -> bool:
-        """Compile a COBOL program"""
+        """
+        Compile a COBOL program using USS cob2 command
+        
+        Args:
+            program: Program name (without extension)
+            source_file: Path to source file (e.g., 'src/base/cobol_src/PROG.cbl')
+            output_file: Path to output object file (e.g., 'build/obj/PROG.o')
+            copylib_paths: List of paths to search for copybooks
+            dbrm_dir: Directory for DBRM output (optional)
+            verbose: Enable verbose output
+        """
         if verbose:
             print(f"Compiling COBOL program: {program}")
+            print(f"  Source: {source_file}")
+            print(f"  Output: {output_file}")
         
-        # Build compiler options
+        # Build cob2 command
+        cmd = ['cob2']
+        
+        # Add compiler options
         options = [
-            "CICS",
-            "SQL",
-            f"LIB('{copylib_ds}')",
-            "NODYNAM",
-            "RENT",
-            "APOST",
-            "OPTIMIZE(FULL)",
-            "TRUNC(OPT)"
+            '-qCICS',           # Enable CICS support
+            '-qSQL',            # Enable SQL support
+            '-qNODYNAM',        # No dynamic calls
+            '-qRENT',           # Reentrant code
+            '-qAPOST',          # Use apostrophes for literals
+            '-qOPTIMIZE(2)',    # Optimization level
+            '-qTRUNC(OPT)',     # Truncation optimization
+            '-c',               # Compile only (no link)
         ]
         
-        if dbrm_ds:
-            options.append(f"DBRMLIB('{dbrm_ds}')")
+        # Add copybook search paths
+        for copylib in copylib_paths:
+            options.append(f'-I{copylib}')
         
-        # Create compile JCL
-        compile_jcl = self._create_compile_jcl(program, source_ds, output_ds, options)
+        # Add DBRM output directory if specified
+        if dbrm_dir:
+            options.append(f'-qDBRM')
+            # cob2 will create DBRM in current directory, we'll move it later
         
-        # Submit JCL
-        return self._submit_jcl(compile_jcl, verbose)
-    
-    def _create_compile_jcl(self, program: str, source_ds: str, 
-                           output_ds: str, options: List[str]) -> str:
-        """Create JCL for COBOL compilation"""
-        cobol_hlq = self.config.get('COBOL_HLQ')
-        cics_hlq = self.config.get('CICS_HLQ')
-        db2_hlq = self.config.get('DB2_HLQ')
-        le_hlq = self.config.get('LE_HLQ')
+        # Add output file specification
+        options.append(f'-o{output_file}')
         
-        jcl = f"""//COMPILE JOB ,CLASS=A,MSGCLASS=X,NOTIFY=&SYSUID
-//COMPILE EXEC PGM=IGYCRCTL,REGION=0M
-//STEPLIB  DD DISP=SHR,DSN={cobol_hlq}.SIGYCOMP
-//         DD DISP=SHR,DSN={cics_hlq}.SDFHLOAD
-//         DD DISP=SHR,DSN={db2_hlq}.SDSNLOAD
-//SYSLIB   DD DISP=SHR,DSN={source_ds}
-//         DD DISP=SHR,DSN={cics_hlq}.SDFHCOB
-//         DD DISP=SHR,DSN={db2_hlq}.SDSNMACS
-//SYSLIN   DD DISP=(NEW,PASS),UNIT=SYSDA,SPACE=(TRK,(10,10))
-//SYSPRINT DD SYSOUT=*
-//SYSUT1   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT2   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT3   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT4   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT5   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT6   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSUT7   DD UNIT=SYSDA,SPACE=(CYL,(1,1))
-//SYSIN    DD DISP=SHR,DSN={source_ds}({program})
-//SYSPARM  DD *
-{' '.join(options)}
-/*
-"""
-        return jcl
-    
-    def _submit_jcl(self, jcl: str, verbose: bool = False) -> bool:
-        """Submit JCL and wait for completion"""
-        temp_jcl = f"/tmp/compile_{os.getpid()}.jcl"
+        # Add all options to command
+        cmd.extend(options)
+        
+        # Add source file
+        cmd.append(source_file)
+        
+        if verbose:
+            print(f"Executing: {' '.join(cmd)}")
+        
         try:
-            with open(temp_jcl, 'w') as f:
-                f.write(jcl)
+            # Execute cob2 command
+            import subprocess
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
             
-            # Submit via submit command
-            cmd = f"submit {temp_jcl}"
-            rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
+            if verbose or result.returncode != 0:
+                if result.stdout:
+                    print(f"STDOUT:\n{result.stdout}")
+                if result.stderr:
+                    print(f"STDERR:\n{result.stderr}")
+            
+            if result.returncode != 0:
+                if verbose:
+                    print(f"Compilation failed with return code: {result.returncode}")
+                return False
+            
+            # Move DBRM file if DB2 compilation was requested
+            if dbrm_dir and os.path.exists(f"{program}.dbrm"):
+                dbrm_target = os.path.join(dbrm_dir, f"{program}.dbrm")
+                os.rename(f"{program}.dbrm", dbrm_target)
+                if verbose:
+                    print(f"DBRM moved to: {dbrm_target}")
             
             if verbose:
-                print(f"JCL submission RC: {rc}")
+                print(f"✓ Compilation successful: {output_file}")
             
-            return rc == 0
-        finally:
-            if os.path.exists(temp_jcl):
-                os.remove(temp_jcl)
+            return True
+            
+        except subprocess.TimeoutExpired:
+            if verbose:
+                print("Compilation timed out")
+            return False
+        except FileNotFoundError:
+            if verbose:
+                print("ERROR: cob2 command not found. Ensure COBOL compiler is in PATH.")
+            return False
+        except Exception as e:
+            if verbose:
+                print(f"Compilation error: {e}")
+            return False
 
 
 class DB2Utilities:
-    """DB2 utilities"""
+    """DB2 utilities using ZOAU"""
     
     def __init__(self, config: BuildConfig):
         self.config = config
     
     def execute_sql(self, sql: str, verbose: bool = False) -> bool:
-        """Execute SQL statements via DB2"""
+        """Execute SQL statements via DB2 using ZOAU mvscmd"""
         if verbose:
             print(f"Executing SQL:\n{sql}")
         
         db2_subsystem = self.config.get('DB2_SUBSYSTEM')
         db2_hlq = self.config.get('DB2_HLQ')
-        dsntep_plan = self.config.get('DB2_DSNTEP_PLAN')
-        dsntep_lib = self.config.get('DB2_DSNTEP_LOADLIB')
+        dsntep_plan = self.config.get('DB2_DSNTEP_PLAN', 'DSNTEP2')
+        dsntep_lib = self.config.get('DB2_DSNTEP_LOADLIB', f'{db2_hlq}.RUNLIB.LOAD')
         
         # Create temporary SQL file
         temp_sql = f"/tmp/sql_{os.getpid()}.sql"
-        temp_tso = f"/tmp/tso_{os.getpid()}.txt"
+        temp_systsin = f"/tmp/systsin_{os.getpid()}.txt"
         
         try:
+            # Write SQL to temporary file
             with open(temp_sql, 'w') as f:
                 f.write(sql)
             
-            # Execute via DSNTEP2
-            tso_cmd = f"""
-DSN SYSTEM({db2_subsystem})
+            # Create SYSTSIN input for DSN command
+            systsin_content = f"""DSN SYSTEM({db2_subsystem})
 RUN PROGRAM(DSNTEP2) PLAN({dsntep_plan}) LIB('{dsntep_lib}')
 END
 """
+            with open(temp_systsin, 'w') as f:
+                f.write(systsin_content)
             
-            with open(temp_tso, 'w') as f:
-                f.write(tso_cmd)
+            # Define DD statements for IKJEFT01
+            dds = [
+                DDStatement('SYSTSPRT', DatasetDefinition('*', disposition='NEW')),
+                DDStatement('SYSTSIN', FileDefinition(temp_systsin,
+                                                      normal_disposition='SHR',
+                                                      status_group='OLD')),
+                DDStatement('SYSPRINT', DatasetDefinition('*', disposition='NEW')),
+                DDStatement('SYSUDUMP', DatasetDefinition('*', disposition='NEW')),
+                DDStatement('SYSIN', FileDefinition(temp_sql,
+                                                    normal_disposition='SHR',
+                                                    status_group='OLD'))
+            ]
             
-            # This is a simplified version - actual implementation would need
-            # proper JCL submission with SYSIN pointing to SQL file
-            rc, stdout, stderr = MVSCommand.run_tso(f"IKJEFT01 <{temp_tso}", verbose)
+            # Execute IKJEFT01 with ZOAU mvscmd
+            if verbose:
+                print(f"Executing DB2 SQL via IKJEFT01")
             
-            return rc == 0
+            response = mvscmd.execute(
+                pgm='IKJEFT01',
+                dds=dds,
+                verbose=verbose
+            )
+            
+            if verbose:
+                print(f"Return code: {response.rc}")
+                if response.stdout_response:
+                    print(f"Output:\n{response.stdout_response}")
+                if response.stderr_response:
+                    print(f"Errors:\n{response.stderr_response}")
+            
+            # Check return code (0 = success)
+            if response.rc != 0:
+                if verbose:
+                    print(f"SQL execution failed with return code: {response.rc}")
+                return False
+            
+            return True
+        except ZOAUException as e:
+            if verbose:
+                print(f"ZOAU execution failed: {e}")
+                print(f"Return code: {e.response.rc}")
+                print(f"Output: {e.response.stdout_response}")
+                print(f"Errors: {e.response.stderr_response}")
+            return False
+        except Exception as e:
+            if verbose:
+                print(f"Error executing SQL: {e}")
+            return False
         finally:
-            for f in [temp_sql, temp_tso]:
+            for f in [temp_sql, temp_systsin]:
                 if os.path.exists(f):
                     os.remove(f)
 
@@ -309,17 +448,21 @@ def print_step(step_num: int, message: str):
 
 
 def check_prerequisites() -> bool:
-    """Check if running in proper USS environment"""
-    # Check for TSO command availability
+    """Check if ZOAU is available"""
     try:
-        result = subprocess.run(['which', 'tsocmd'], capture_output=True)
-        if result.returncode != 0:
-            print("ERROR: tsocmd not found. Ensure you're running in z/OS USS environment.")
-            return False
-    except Exception:
-        print("ERROR: Unable to check for tsocmd. Ensure you're running in z/OS USS environment.")
+        # Try to import ZOAU modules
+        import zoautil_py
+        
+        # Try a simple ZOAU operation
+        hlq = datasets.get_hlq()
+        
+        print(f"ZOAU is available. Current HLQ: {hlq}")
+        return True
+    except ImportError:
+        print("ERROR: ZOAU Python modules not found. Ensure ZOAU is installed and PYTHONPATH is set correctly.")
         return False
-    
-    return True
+    except Exception as e:
+        print(f"ERROR: ZOAU check failed: {e}")
+        return False
 
 # Made with Bob
