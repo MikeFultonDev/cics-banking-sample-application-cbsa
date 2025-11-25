@@ -10,8 +10,15 @@ import subprocess
 from cbsa_utils import BuildConfig, MVSCommand, print_banner, print_step, check_prerequisites
 
 
+def check_vsam_exists(dataset_name: str, verbose: bool = False) -> bool:
+    """Check if a VSAM dataset exists"""
+    cmd = f"LISTCAT ENTRIES('{dataset_name}')"
+    rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
+    return rc == 0
+
+
 def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
-    """Create VSAM files for CBSA"""
+    """Create VSAM files for CBSA (skip if already exist)"""
     
     print_banner("Creating VSAM Files")
     
@@ -20,56 +27,92 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
     # Step 1: Create ABNDFILE
     print_step(1, "Creating ABNDFILE VSAM KSDS")
     
-    abndfile_params = {
-        'CYL': '6 6',
-        'KEYS': '12 0',
-        'RECORDSIZE': '681 681',
-        'SHAREOPTIONS': '2 3',
-        'INDEXED': '',
-        'LOG': 'NONE',
-        'REUSE': '',
-        'FREESPACE': '3 3'
-    }
-    
     abndfile = f"{bank_prefix}.ABNDFILE"
     
-    if MVSCommand.allocate_dataset(abndfile, abndfile_params, verbose):
-        print(f"✓ {abndfile} created successfully")
+    if check_vsam_exists(abndfile, verbose):
+        print(f"✓ {abndfile} already exists (skipping creation)")
     else:
-        print(f"✗ Failed to create {abndfile}")
-        return False
+        abndfile_params = {
+            'CYL': '6 6',
+            'KEYS': '12 0',
+            'RECORDSIZE': '681 681',
+            'SHAREOPTIONS': '2 3',
+            'INDEXED': '',
+            'LOG': 'NONE',
+            'REUSE': '',
+            'FREESPACE': '3 3'
+        }
+        
+        if MVSCommand.allocate_dataset(abndfile, abndfile_params, verbose):
+            print(f"✓ {abndfile} created successfully")
+        else:
+            print(f"✗ Failed to create {abndfile}")
+            return False
     
     # Step 2: Create CUSTOMER file
     print_step(2, "Creating CUSTOMER VSAM KSDS")
     
-    customer_params = {
-        'CYL': '50 50',
-        'KEYS': '16 4',
-        'RECORDSIZE': '259 259',
-        'SHAREOPTIONS': '2 3',
-        'INDEXED': '',
-        'LOG': 'UNDO',
-    }
-    
     customer = f"{bank_prefix}.CUSTOMER"
     
-    if MVSCommand.allocate_dataset(customer, customer_params, verbose):
-        print(f"✓ {customer} created successfully")
+    if check_vsam_exists(customer, verbose):
+        print(f"✓ {customer} already exists (skipping creation)")
     else:
-        print(f"✗ Failed to create {customer}")
-        return False
+        customer_params = {
+            'CYL': '50 50',
+            'KEYS': '16 4',
+            'RECORDSIZE': '259 259',
+            'SHAREOPTIONS': '2 3',
+            'INDEXED': '',
+            'LOG': 'UNDO',
+        }
+        
+        if MVSCommand.allocate_dataset(customer, customer_params, verbose):
+            print(f"✓ {customer} created successfully")
+        else:
+            print(f"✗ Failed to create {customer}")
+            return False
     
     return True
+
+
+def check_data_populated(config: BuildConfig, verbose: bool = False) -> bool:
+    """Check if data is already populated in DB2"""
+    from cbsa_utils import DB2Utilities
+    
+    db2_utils = DB2Utilities(config)
+    db2_owner = config.get('DB2_OWNER')
+    
+    # Check if ACCOUNT table has data
+    sql_check = f"""
+SET CURRENT SQLID = '{db2_owner}';
+SELECT COUNT(*) AS CNT FROM ACCOUNT;
+"""
+    
+    try:
+        result = db2_utils.execute_sql(sql_check, verbose)
+        # execute_sql returns bool, so we check if it succeeded
+        # If table has data and query succeeds, we assume it's populated
+        return result
+    except:
+        pass
+    
+    return False
 
 
 def populate_data(config: BuildConfig, start_cust: int = 1, end_cust: int = 10000,
                  increment: int = 1, seed: int = 1000000000000000,
                  verbose: bool = False) -> bool:
-    """Run BANKDATA program to populate data"""
+    """Run BANKDATA program to populate data (skip if already populated)"""
     
     print_banner("Populating Data")
     
-    print_step(1, "Running BANKDATA Program")
+    # Check if data is already populated
+    print_step(1, "Checking if data is already populated")
+    if check_data_populated(config, verbose):
+        print("✓ Data is already populated (skipping population)")
+        return True
+    
+    print_step(2, "Running BANKDATA Program")
     print(f"Customer range: {start_cust} to {end_cust} (increment: {increment})")
     print(f"Random seed: {seed}")
     
