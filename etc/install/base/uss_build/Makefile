@@ -1,10 +1,10 @@
 # CBSA USS Build System Makefile
 # GNU Make-based build orchestration for CICS Banking Sample Application
 
-.PHONY: all clean help install setup-db2 compile bind populate verify \
+.PHONY: all bind-clean bind-help install setup-db2 compile bind populate verify \
         create-libs setup-db2-only compile-only bind-only populate-only \
         clean-db2 clean-vsam clean-all compile-programs compile-maps \
-        bind-packages bind-plan rebind-plan free-plan
+        bind-packages bind-plan bind-rebind-plan free-plan
 
 # Configuration
 CONFIG_FILE ?= build.conf
@@ -17,10 +17,6 @@ ifeq ($(VERBOSE),1)
 else
     VERBOSE_FLAG =
 endif
-
-# Include the compilation and binding Makefiles
-include compile.mk
-include bind.mk
 
 # Default target
 all: help
@@ -64,12 +60,11 @@ help:
 	@echo "  make clean-db2 setup-db2        # Recreate DB2 artifacts"
 	@echo ""
 	@echo "For detailed help:"
-	@echo "  make -f compile.mk help         # Show compilation-specific help"
-	@echo "  make -f bind.mk help-bind       # Show binding-specific help"
+	@echo "  make bind-help                  # Show binding-specific help"
 	@echo ""
 
 # Complete installation
-install: create-libs setup-db2 compile bind populate verify
+install: create-libs setup-db2 compile db2bind populate verify
 	@echo ""
 	@echo "=========================================="
 	@echo "CBSA Installation Complete!"
@@ -97,45 +92,62 @@ setup-db2:
 	@echo "=========================================="
 	$(PYTHON) 02_setup_db2.py -c $(CONFIG_FILE) $(VERBOSE_FLAG)
 
-# Step 3: Compile programs (now uses compile.mk)
-compile: programs maps
+# Step 3: Compile programs and maps
+compile: compile-programs compile-maps
 	@echo ""
 	@echo "=========================================="
-	@echo "Step 3: Compilation Complete"
+	@echo "Compilation Complete"
 	@echo "=========================================="
-	@echo "✓ All COBOL programs compiled"
-	@echo "✓ All BMS maps assembled"
-	@echo ""
 
-# Compile programs only
-compile-programs: programs
-
-# Compile maps only
-compile-maps: maps
-
-# Step 4: Bind to DB2 (now uses bind.mk)
-bind: bind-all
+# Compile COBOL programs only
+compile-programs:
 	@echo ""
 	@echo "=========================================="
-	@echo "Step 4: DB2 Binding Complete"
+	@echo "Step 3a: Compiling COBOL Programs"
 	@echo "=========================================="
-	@echo "✓ All DB2 packages bound"
-	@echo "✓ DB2 plan bound"
+	$(PYTHON) 03_compile_programs.py -c $(CONFIG_FILE) --programs-only $(VERBOSE_FLAG)
+
+# Compile BMS maps only
+compile-maps:
 	@echo ""
+	@echo "=========================================="
+	@echo "Step 3b: Assembling BMS Maps"
+	@echo "=========================================="
+	$(PYTHON) 03_compile_programs.py -c $(CONFIG_FILE) --maps-only $(VERBOSE_FLAG)
+
+# Step 4: Bind to DB2
+bind: bind-packages bind-plan
+	@echo ""
+	@echo "=========================================="
+	@echo "DB2 Binding Complete"
+	@echo "=========================================="
+
+# Alias for bind (referenced in install target)
+db2bind: bind
 
 # Bind packages only
-bind-packages: packages
+bind-packages:
+	@echo ""
+	@echo "=========================================="
+	@echo "Step 4a: Binding DB2 Packages"
+	@echo "=========================================="
+	$(PYTHON) 04_bind_db2.py -c $(CONFIG_FILE) --packages-only $(VERBOSE_FLAG)
 
 # Bind plan only (requires packages)
-bind-plan: plan
+bind-plan:
+	@echo ""
+	@echo "=========================================="
+	@echo "Step 4b: Binding DB2 Plan"
+	@echo "=========================================="
+	$(PYTHON) 04_bind_db2.py -c $(CONFIG_FILE) --plan-only $(VERBOSE_FLAG)
 
 # Rebind plan (faster than full bind)
-rebind-plan:
+bind-rebind-plan:
 	@echo ""
 	@echo "=========================================="
 	@echo "Rebinding DB2 Plan"
 	@echo "=========================================="
-	@$(MAKE) -f bind.mk rebind-plan
+	$(PYTHON) 04_bind_db2.py -c $(CONFIG_FILE) --rebind-plan $(VERBOSE_FLAG)
 
 # Free plan and packages
 free-plan:
@@ -143,7 +155,10 @@ free-plan:
 	@echo "=========================================="
 	@echo "Freeing DB2 Plan and Packages"
 	@echo "=========================================="
-	@$(MAKE) -f bind.mk free-plan
+	$(PYTHON) 04_bind_db2.py -c $(CONFIG_FILE) --free-plan $(VERBOSE_FLAG)
+
+# Alias for free-plan
+bind-free-plan: free-plan
 
 # Step 5: Populate data
 populate:
@@ -175,7 +190,7 @@ clean-all: clean-db2 clean-vsam
 	@echo "Note: MVS libraries are not automatically deleted"
 	@echo "      Use TSO DELETE command if needed"
 
-clean: clean-db2
+bind-clean: clean-db2
 	@echo "Build artifacts cleaned"
 
 # Individual component builds
@@ -196,7 +211,31 @@ rebuild-db2: clean-db2 setup-db2 bind populate
 
 rebuild-compile: compile bind
 
-rebuild-bind: clean-bind bind
+# Bind help
+bind-help:
+	@echo "DB2 Binding Help"
+	@echo "================"
+	@echo ""
+	@echo "Available binding targets:"
+	@echo "  bind             - Bind all packages and plan"
+	@echo "  bind-packages    - Bind DB2 packages only"
+	@echo "  bind-plan        - Bind DB2 plan only"
+	@echo "  bind-rebind-plan - Rebind existing plan (faster)"
+	@echo "  free-plan        - Free DB2 plan and packages"
+	@echo "  bind-free-plan   - Alias for free-plan"
+	@echo ""
+	@echo "Options:"
+	@echo "  VERBOSE=1        - Enable verbose output"
+	@echo "  CONFIG_FILE=file - Use alternate configuration"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make bind                    # Full bind"
+	@echo "  make bind-packages           # Packages only"
+	@echo "  make bind-rebind-plan        # Quick rebind"
+	@echo "  make free-plan               # Clean up bindings"
+	@echo ""
+
+rebuild-bind: clean-db2 bind
 
 rebuild-all: clean-all install
 
@@ -212,24 +251,23 @@ quick-install: create-libs setup-db2 compile bind
 	@echo "Quick installation complete (data population skipped)"
 	@echo "Run 'make populate' to populate data"
 
-# Development targets (now use compile.mk)
+# Development targets
 dev-compile: compile-programs
 
 dev-maps: compile-maps
 
-# Single program compilation (use compile.mk targets directly)
+# Single program compilation
 compile-program:
 	@if [ -z "$(PROGRAM)" ]; then \
 		echo "Error: PROGRAM variable not set"; \
 		echo "Usage: make compile-program PROGRAM=<program-name>"; \
-		echo "Or directly: make build/load/<PROGRAM>"; \
 		exit 1; \
 	fi
 	@echo "Compiling program: $(PROGRAM)"
-	@$(MAKE) -f compile.mk build/load/$(PROGRAM)
+	$(PYTHON) 03_compile_programs.py -c $(CONFIG_FILE) --program $(PROGRAM) $(VERBOSE_FLAG)
 
 # Status check
-status:
+bind-status:
 	@echo "CBSA Build System Status"
 	@echo "========================"
 	@echo ""
@@ -249,18 +287,6 @@ status:
 			echo "  ✗ $$script (missing)"; \
 		fi \
 	done
-	@echo ""
-	@echo "Build system:"
-	@if [ -f compile.mk ]; then \
-		echo "  ✓ compile.mk (Makefile-based compilation)"; \
-	else \
-		echo "  ✗ compile.mk (missing)"; \
-	fi
-	@if [ -f bind.mk ]; then \
-		echo "  ✓ bind.mk (Makefile-based DB2 binding)"; \
-	else \
-		echo "  ✗ bind.mk (missing)"; \
-	fi
 	@echo ""
 
 # Make scripts executable

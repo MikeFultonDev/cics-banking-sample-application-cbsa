@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd etc/install/base/uss_build
+gmake 
