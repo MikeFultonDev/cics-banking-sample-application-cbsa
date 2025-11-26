@@ -1,13 +1,13 @@
 # CBSA DB2 Management Makefile
-# Manages DB2 database, tables, indexes, packages, and plans using JCL submission
+# Manages DB2 database, tables, indexes, packages, and plans using db2cmd.py
 # Copyright IBM Corp. 2023, 2025
 
 .PHONY: db2-help db2-create db2-drop db2-bind-packages db2-bind-plan db2-bind-all \
         db2-create-database db2-create-stogroups db2-create-tablespaces \
         db2-create-tables db2-create-indexes db2-grant db2-test
 
-# DB2 JCL directory
-DB2JCL_DIR := ../db2jcl
+# DB2 SQL directory
+DB2SQL_DIR := db2sql
 
 # Configuration from build.conf
 -include build.conf
@@ -19,26 +19,34 @@ DB2_OWNER ?= IBMUSER
 DB2_PLAN ?= CBSA
 DB2_PACKAGE ?= PCBSA
 DB2_DSNTEP_PLAN ?= DSNTEP2
-DB2_DSNTEP_LOADLIB ?= $(DB2_HLQ).RUNLIB
+DB2_DSNTEP_LOADLIB ?= $(DB2_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DSNV12DP
 BANK_USER ?= CICSUSER
 DBRM ?= $(BANK_PREFIX).DBRM
 
-# JCL submission command using ZOAU
-SUBMIT_JCL := mvscmd --pgm=IEBGENER --sysut2=INTRDR
+# db2cmd.py command
+DB2CMD := bin/db2cmd.py
 
-# Helper function to substitute JCL variables
-define substitute_jcl
-	@sed -e 's/@DB2_HLQ@/$(DB2_HLQ)/g' \
-	     -e 's/@DB2_SUBSYSTEM@/$(DB2_SUBSYSTEM)/g' \
-	     -e 's/@DB2_OWNER@/$(DB2_OWNER)/g' \
-	     -e 's/@BANK_DBRMLIB@/$(DBRM)/g' \
-	     -e 's/@BANK_PLAN@/$(DB2_PLAN)/g' \
-	     -e 's/@BANK_PACKAGE@/$(DB2_PACKAGE)/g' \
-	     -e 's/@DB2_DSNTEP_PLAN@/$(DB2_DSNTEP_PLAN)/g' \
-	     -e 's/@DB2_DSNTEP_LOADLIB@/$(DB2_DSNTEP_LOADLIB)/g' \
-	     -e 's/@BANK_USER@/$(BANK_USER)/g' \
-	     $(1)
+# Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
+define run_db2cmd
+	@echo "Executing $(1)..."
+	@SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
+	SYSIN_PIPE=/tmp/sysin_$(1)_$$$$.pipe; \
+	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; \
+	export DB2_HLQ='$(DB2_HLQ)' \
+	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
+	       DB2_OWNER='$(DB2_OWNER)' \
+	       BANK_DBRMLIB='$(DBRM)' \
+	       BANK_PLAN='$(DB2_PLAN)' \
+	       BANK_PACKAGE='$(DB2_PACKAGE)' \
+	       DB2_DSNTEP_PLAN='$(DB2_DSNTEP_PLAN)' \
+	       DB2_DSNTEP_LOADLIB='$(DB2_DSNTEP_LOADLIB)' \
+	       DB2_VCAT='$(DB2_VCAT)' \
+	       BANK_USER='$(BANK_USER)'; \
+	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE &); \
+	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE &); \
+	$(DB2CMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE; \
+	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
 endef
 
 # DB2 Help
@@ -83,40 +91,40 @@ db2-create: db2-create-database db2-create-stogroups db2-create-tablespaces \
 # Create database
 db2-create-database:
 	@echo "Creating CBSA database..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CREDB00.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Database creation job submitted"
+	@$(call run_db2cmd,CREDB00)
+	@echo "✓ Database created"
 
 # Create storage groups
 db2-create-stogroups:
 	@echo "Creating storage groups..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRESG01.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRESG02.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRESG03.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Storage group creation jobs submitted"
+	@$(call run_db2cmd,CRESG01)
+	@$(call run_db2cmd,CRESG02)
+	@$(call run_db2cmd,CRESG03)
+	@echo "✓ Storage groups created"
 
 # Create tablespaces
 db2-create-tablespaces:
 	@echo "Creating tablespaces..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETS01.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETS02.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETS03.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Tablespace creation jobs submitted"
+	@$(call run_db2cmd,CRETS01)
+	@$(call run_db2cmd,CRETS02)
+	@$(call run_db2cmd,CRETS03)
+	@echo "✓ Tablespaces created"
 
 # Create tables
 db2-create-tables:
 	@echo "Creating tables..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETB01.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETB02.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CRETB03.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Table creation jobs submitted"
+	@$(call run_db2cmd,CRETB01)
+	@$(call run_db2cmd,CRETB02)
+	@$(call run_db2cmd,CRETB03)
+	@echo "✓ Tables created"
 
 # Create indexes
 db2-create-indexes:
 	@echo "Creating indexes..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CREI101.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CREI201.jcl) | $(SUBMIT_JCL)
-	@$(call substitute_jcl,$(DB2JCL_DIR)/CREI301.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Index creation jobs submitted"
+	@$(call run_db2cmd,CREI101)
+	@$(call run_db2cmd,CREI201)
+	@$(call run_db2cmd,CREI301)
+	@echo "✓ Indexes created"
 
 # Bind all packages and plan
 db2-bind-all: db2-bind-packages db2-bind-plan db2-grant

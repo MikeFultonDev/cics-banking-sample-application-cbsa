@@ -1,19 +1,35 @@
 # CBSA USS Build System Makefile
 # GNU Make-based build orchestration for CICS Banking Sample Application
 
+$(shell echo "pb" $(PWD) >/tmp/out)
+
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+mkfile_dir := $(dir $(mkfile_path))
+
+$(shell echo "x" $(MAKEFILE_LIST) >>/tmp/out)
+$(shell echo "y" $(mkfile_path) >>/tmp/out)
+$(shell echo "z" $(mkfile_dir) >>/tmp/out)
+$(shell echo "pa" $(PWD) >>/tmp/out)
 # Common build configuration
 # These variables are shared across compile.mk, assemble.mk, and link.mk
 
 # Source directories
-SRC_DIR := ../../../src/base/cobol_src
-COPY_DIR := ../../../src/base/cobol_copy
-BMS_SRC_DIR := ../../../src/base/bms_src
+REL_ROOT_DIR := .
+SRC_DIR := $(REL_ROOT_DIR)/src/base/cobol_src
+COPY_DIR := $(REL_ROOT_DIR)/src/base/cobol_copy
+BMS_SRC_DIR := $(REL_ROOT_DIR)/src/base/bms_src
 
 # Build directories
-BUILD_DIR := build
+
+BUILD_DIR := etc/build
 OBJ_DIR := $(BUILD_DIR)/obj
 DBRM_DIR := $(BUILD_DIR)/dbrm
 DSECT_DIR := $(BUILD_DIR)/dsect
+LOAD_DIR := $(BUILD_DIR)/load
+BIND_DIR := $(BUILD_DIR)/bind
+
+# Ensure build directories exist
+$(shell mkdir -p $(OBJ_DIR) $(DBRM_DIR) $(DSECT_DIR) $(LOAD_DIR) $(BIND_DIR))
 
 # Target MVS datasets
 LOADLIB_HLQ ?= CBSA.CICSBSA
@@ -21,13 +37,13 @@ LOADLIB := $(LOADLIB_HLQ).LOADLIB
 DSECT_LIB := $(LOADLIB_HLQ).DSECT
 
 # Include COBOL compilation, BMS assembly, linking, and DB2 makefiles
-include compile.mk
-include assemble.mk
-include link.mk
-include db2.mk
+include $(mkfile_dir)/compile.mk
+include $(mkfile_dir)/assemble.mk
+include $(mkfile_dir)/link.mk
+include $(mkfile_dir)/db2.mk
 
 .PHONY: all db2bind-clean db2bind-help install setup-db2 compile assemble link db2bind populate verify \
-        create-libs setup-db2-only compile-only assemble-only link-only db2bind-only populate-only \
+        setup-db2-only compile-only assemble-only link-only db2bind-only populate-only \
         clean-db2 clean-vsam clean-all compile-programs compile-maps assemble-maps link-programs \
         db2bind-packages db2bind-plan db2bind-rebind-plan free-plan db2-help
 
@@ -53,7 +69,6 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  install          - Complete installation (all steps)"
-	@echo "  create-libs      - Create MVS libraries and copy source files"
 	@echo "  setup-db2        - Create DB2 database, tables, and indexes"
 	@echo "  compile          - Compile COBOL programs"
 	@echo "  compile-programs - Compile COBOL programs only"
@@ -101,7 +116,7 @@ help:
 	@echo ""
 
 # Complete installation
-install: create-libs setup-db2 compile assemble link db2bind populate verify
+install: setup-db2 compile assemble link db2bind populate verify
 	@echo ""
 	@echo "=========================================="
 	@echo "CBSA Installation Complete!"
@@ -113,30 +128,22 @@ install: create-libs setup-db2 compile assemble link db2bind populate verify
 	@echo "3. Restart CICS region and z/OS Connect server"
 	@echo ""
 
-# Step 1: Create libraries
-create-libs:
-	@echo ""
-	@echo "=========================================="
-	@echo "Step 1: Creating Libraries"
-	@echo "=========================================="
-	$(PYTHON) 01_create_libraries.py -c $(CONFIG_FILE) $(VERBOSE_FLAG)
-
-# Step 2: Setup DB2 (now using db2.mk targets)
+# Step 1: Setup DB2 (now using db2.mk targets)
 setup-db2:
 	@echo ""
 	@echo "=========================================="
-	@echo "Step 2: Setting up DB2"
+	@echo "Step 1: Setting up DB2"
 	@echo "=========================================="
 	@$(MAKE) db2-create
 
-# Step 3: Compile programs
+# Step 2: Compile programs
 compile: compile-programs
 	@echo ""
 	@echo "=========================================="
 	@echo "Compilation Complete"
 	@echo "=========================================="
 
-# Step 3.5: Assemble BMS maps
+# Step 3: Assemble BMS maps
 assemble: assemble-maps
 	@echo ""
 	@echo "=========================================="

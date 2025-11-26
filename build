@@ -1,4 +1,22 @@
 #!/bin/sh
 
-cd etc/install/base/uss_build
-gmake 
+export HOSTNAME="$(hostname -s)"
+
+CBSADIR="$(cd "$(dirname "$0")" > /dev/null 2>&1 && pwd -P)"
+
+export CBSADIR
+
+source setenv
+rc=$?
+if [ $rc -gt 0 ]; then
+    exit $rc
+fi
+
+#
+# We specify the relative directory for the Makefile so that
+# errors that are generated will be relative to our root directory
+# and will appear correctly in the IDE.
+#
+gmake --makefile=etc/install/base/uss_build/Makefile
+rc=$?
+exit $rc
