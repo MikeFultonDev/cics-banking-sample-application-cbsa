@@ -7,7 +7,7 @@
         db2-create-tables db2-create-indexes db2-grant db2-test
 
 # DB2 SQL directory
-DB2SQL_DIR := db2sql
+DB2SQL_DIR := $(mkfile_dir)/db2sql
 
 # Configuration from build.conf
 -include build.conf
@@ -22,10 +22,9 @@ DB2_DSNTEP_PLAN ?= DSNTEP2
 DB2_DSNTEP_LOADLIB ?= $(DB2_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DSNV12DP
 BANK_USER ?= CICSUSER
-DBRM ?= $(BANK_PREFIX).DBRM
 
 # db2cmd.py command
-DB2CMD := bin/db2cmd.py
+DB2CMD := $(mkfile_dir)/bin/db2cmd.py
 
 # Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
 define run_db2cmd
@@ -36,7 +35,6 @@ define run_db2cmd
 	export DB2_HLQ='$(DB2_HLQ)' \
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
 	       DB2_OWNER='$(DB2_OWNER)' \
-	       BANK_DBRMLIB='$(DBRM)' \
 	       BANK_PLAN='$(DB2_PLAN)' \
 	       BANK_PACKAGE='$(DB2_PACKAGE)' \
 	       DB2_DSNTEP_PLAN='$(DB2_DSNTEP_PLAN)' \
@@ -181,7 +179,6 @@ db2-show-config:
 	@echo "DB2_DSNTEP_LOADLIB: $(DB2_DSNTEP_LOADLIB)"
 	@echo "DB2_VCAT:          $(DB2_VCAT)"
 	@echo "BANK_USER:         $(BANK_USER)"
-	@echo "DBRM:              $(DBRM)"
 	@echo ""
 
 # Rebuild DB2 (drop and recreate)

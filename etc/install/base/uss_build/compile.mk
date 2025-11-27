@@ -4,7 +4,7 @@
 
 .PHONY: clean-cobol help-cobol list-programs status-cobol
 
-# Note: Common variables (SRC_DIR, COPY_DIR, BUILD_DIR, OBJ_DIR, DBRM_DIR)
+# Note: Common variables (SRC_DIR, COPY_DIR, BUILD_DIR, OBJ_DIR)
 # are defined in the main Makefile
 
 # Compiler settings
@@ -39,29 +39,27 @@ cobol-programs: $(ALL_LOADS)
 	@echo "✓ COBOL compilation complete: $(words $(ALL_LOADS)) programs built"
 
 # Create build directories
-$(OBJ_DIR) $(LOAD_DIR) $(DBRM_DIR):
+$(OBJ_DIR) $(LOAD_DIR):
 	@mkdir -p $@
 
 # Compile CICS programs (with CICS and DB2 support)
-$(LOAD_DIR)/%: $(SRC_DIR)/%.cbl | $(OBJ_DIR) $(LOAD_DIR) $(DBRM_DIR)
+$(LOAD_DIR)/%.o: $(SRC_DIR)/%.cbl | $(OBJ_DIR) $(LOAD_DIR)
 	@echo "Compiling CICS program: $*"
-	@$(COB2) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
+	$(COB2) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
 		-I$(COPY_DIR) \
-		-o $@ \
-		-c -qOBJECT=$(OBJ_DIR)/$*.o \
-		-qDBRM=$(DBRM_DIR)/$*.dbrm \
-		$<
+		-o $(abspath $@) \
+		-c \
+		$(abspath $<)
 	@echo "✓ $* compiled successfully"
 
 # Compile batch programs (no CICS, with DB2 support)
-$(LOAD_DIR)/BANKDATA: $(SRC_DIR)/BANKDATA.cbl | $(OBJ_DIR) $(LOAD_DIR) $(DBRM_DIR)
+$(LOAD_DIR)/BANKDATA.o: $(SRC_DIR)/BANKDATA.cbl | $(OBJ_DIR) $(LOAD_DIR)
 	@echo "Compiling batch program: BANKDATA"
-	@$(COB2) $(COBOL_FLAGS) $(DB2_FLAGS) \
+	$(COB2) $(COBOL_FLAGS) $(DB2_FLAGS) \
 		-I$(COPY_DIR) \
-		-o $@ \
-		-c -qOBJECT=$(OBJ_DIR)/BANKDATA.o \
-		-qDBRM=$(DBRM_DIR)/BANKDATA.dbrm \
-		$<
+		-o $(abspath $@) \
+		-c \
+		$(abspath $<)
 	@echo "✓ BANKDATA compiled successfully"
 
 # Clean build artifacts
@@ -98,7 +96,6 @@ help-cobol:
 	@echo "  Copy:    $(COPY_DIR)"
 	@echo "  Objects: $(OBJ_DIR)"
 	@echo "  Loads:   $(LOAD_DIR)"
-	@echo "  DBRMs:   $(DBRM_DIR)"
 	@echo ""
 
 # List all programs
@@ -140,9 +137,6 @@ status-cobol:
 		fi; \
 		if [ -d "$(LOAD_DIR)" ]; then \
 			echo "  Loads: $$(ls -1 $(LOAD_DIR) 2>/dev/null | wc -l)"; \
-		fi; \
-		if [ -d "$(DBRM_DIR)" ]; then \
-			echo "  DBRMs: $$(ls -1 $(DBRM_DIR)/*.dbrm 2>/dev/null | wc -l)"; \
 		fi; \
 	else \
 		echo "  ✗ Build directory not found (will be created on first build)"; \

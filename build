@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 export HOSTNAME="$(hostname -s)"
 
@@ -17,6 +17,6 @@ fi
 # errors that are generated will be relative to our root directory
 # and will appear correctly in the IDE.
 #
-gmake --makefile=etc/install/base/uss_build/Makefile
+gmake --makefile=etc/install/base/uss_build/Makefile install
 rc=$?
 exit $rc
