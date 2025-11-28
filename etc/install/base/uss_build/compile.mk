@@ -1,6 +1,8 @@
 # CBSA COBOL Compilation Makefile
 # Incremental compilation using cob2 compiler interface in USS
-# Copyright IBM Corp. 2023, 2025
+# Use the bash shell and if a command in a pipe fails, fail immediately.
+SHELL := /bin/env bash
+.SHELLFLAGS := -e -u -c
 
 .PHONY: clean-cobol help-cobol list-programs status-cobol
 
@@ -9,9 +11,9 @@
 
 # Compiler settings
 COB2 := cob2
-COBOL_FLAGS := -qrent -qlist -qxref -qmap -qopt -qapost -qtrunc=opt
+COBOL_FLAGS := -comprc_ok=4 -qrent -qlist -qxref -qmap -qapost
 CICS_FLAGS := -qcics
-DB2_FLAGS := -qsql
+DB2_FLAGS := -q"sql('CCSID(1140)')" -q'codepage(1140)' -dbrmlib
 
 # COBOL source files (from cobol_src.md analysis)
 CICS_PROGRAMS := ABNDPROC BNK1CAC BNK1CCA BNK1CCS BNK1CRA BNK1DAC BNK1DCS \
@@ -35,7 +37,7 @@ BATCH_LOADS := $(addprefix $(LOAD_DIR)/,$(BATCH_PROGRAMS))
 ALL_LOADS := $(CICS_LOADS) $(BATCH_LOADS)
 
 # Target for compiling all COBOL programs (called from main Makefile)
-cobol-programs: $(ALL_LOADS)
+cobol-programs: $(ALL_OBJS) $(ALL_LOADS)
 	@echo "✓ COBOL compilation complete: $(words $(ALL_LOADS)) programs built"
 
 # Create build directories
@@ -43,24 +45,40 @@ $(OBJ_DIR) $(LOAD_DIR):
 	@mkdir -p $@
 
 # Compile CICS programs (with CICS and DB2 support)
-$(LOAD_DIR)/%.o: $(SRC_DIR)/%.cbl | $(OBJ_DIR) $(LOAD_DIR)
+# The 'cat' at the end is to ensure that the errors are tagged as IBM-1047
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cbl
 	@echo "Compiling CICS program: $*"
-	$(COB2) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
-		-I$(COPY_DIR) \
-		-o $(abspath $@) \
+	( \
+		cd $(LOAD_DIR); \
+		$(COB2) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
+		-I$(abspath $(COPY_DIR)) \
 		-c \
-		$(abspath $<)
-	@echo "✓ $* compiled successfully"
+		$(abspath $<) \
+		2>&1 >/dev/null | iconv -T -f IBM-1047 -t ISO8859-1 >&2; \
+		RC=$${PIPESTATUS[0]}; \
+		if [ $$RC -ne 0 ]; then \
+			exit $$RC; \
+		fi \
+	)
+	@echo "$* compiled successfully"
 
 # Compile batch programs (no CICS, with DB2 support)
-$(LOAD_DIR)/BANKDATA.o: $(SRC_DIR)/BANKDATA.cbl | $(OBJ_DIR) $(LOAD_DIR)
+$(OBJ_DIR)/BANKDATA.o: $(SRC_DIR)/BANKDATA.cbl
 	@echo "Compiling batch program: BANKDATA"
-	$(COB2) $(COBOL_FLAGS) $(DB2_FLAGS) \
-		-I$(COPY_DIR) \
-		-o $(abspath $@) \
+	( \
+		cd $(LOAD_DIR); \
+		$(COB2) $(COBOL_FLAGS) $(DB2_FLAGS) \
+		-I$(abspath $(COPY_DIR)) \
 		-c \
-		$(abspath $<)
-	@echo "✓ BANKDATA compiled successfully"
+		$(abspath $<) \
+		2>&1 >/dev/null | cat >&2;\
+		RC=$${PIPESTATUS[0]}; \
+		if [ $$RC -ne 0 ]; then \
+			exit $$RC; \
+		fi \
+	)		
+	@echo "BANKDATA compiled successfully"
 
 # Clean build artifacts
 clean-cobol:
@@ -152,6 +170,6 @@ status-cobol:
 
 # Dependency tracking (simplified - assumes all programs depend on all copybooks)
 # For more sophisticated dependency tracking, consider using makedepend or similar
-$(ALL_LOADS): $(wildcard $(COPY_DIR)/*.cpy)
-
-# Made with Bob
+$(ALL_LOADS):
+		$(LD) $(LD_FLAGS) -o $(LOAD_DIR)/$(notdir $@) $(OBJ_DIR)/$(notdir $@).o \
+		2>/tmp/$$.err >/tmp/$$.out
