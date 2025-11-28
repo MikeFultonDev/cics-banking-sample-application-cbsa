@@ -8,8 +8,8 @@
 # LOADLIB_HLQ, LOADLIB, DSECT_LIB) are defined in the main Makefile
 
 # Assembly-specific directories
-ASSEMBLE_DIR := $(BUILD_DIR)/assemble
-ASSEMBLE_STAMP_DIR := $(ASSEMBLE_DIR)/stamps
+BMS_MACRO_DIR := $(BUILD_DIR)/bmsmac
+BMS_OBJ_DIR := $(BUILD_DIR)/bmsobj
 
 # Assembler settings
 AS := as
@@ -19,43 +19,46 @@ AS_FLAGS := -mgoff
 BMS_MAPS := BNK1ACC BNK1CAM BNK1CCM BNK1CDM BNK1DAM BNK1DCM BNK1MAI BNK1TFM BNK1UAM
 
 # Object files for maps
-MAP_OBJS := $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(BMS_MAPS)))
+MAP_OBJS := $(addprefix $(BMS_OBJ_DIR)/,$(addsuffix .o,$(BMS_MAPS)))
 
-# Stamp files (used to track when MVS load modules are up to date)
-MAP_STAMPS := $(addprefix $(ASSEMBLE_STAMP_DIR)/,$(addsuffix .stamp,$(BMS_MAPS)))
-
-# Target for assembling all maps
-assemble-maps: $(MAP_STAMPS)
-	@echo "✓ BMS map assembly complete: $(words $(MAP_STAMPS)) maps assembled"
+# Generated COPYBOOK files
+MAP_MACROS := $(addprefix $(BMS_MACRO_DIR)/,$(addsuffix .cpy,$(BMS_MAPS)))
 
 # Create assembly directories
-$(ASSEMBLE_DIR) $(ASSEMBLE_STAMP_DIR) $(DSECT_DIR):
-	@mkdir -p $@
+$(BMS_MACRO_DIR) $(BMS_OBJ_DIR):
+	mkdir -p $@
+
+# Target for assembling all maps
+assemble-maps: $(MAP_MACROS)
+	@echo "✓ BMS map assembly complete: $(words $(MAP_MACROS)) maps assembled"
 
 # Assemble BMS maps
 # Process: .bms -> assemble MAP -> link to LOADLIB, assemble DSECT -> copy to DSECT dataset
-$(ASSEMBLE_STAMP_DIR)/%.stamp: $(BMS_SRC_DIR)/%.bms | $(ASSEMBLE_DIR) $(ASSEMBLE_STAMP_DIR) $(OBJ_DIR) $(DSECT_DIR)
+$(BMS_MACRO_DIR)/%.cpy: $(BMS_SRC_DIR)/%.bms 
 	@echo "Assembling BMS map: $*"
 	@# Step 1: Generate MAP assembler source
-	@echo "  Generating MAP source..."
-	@cicsbms -m $< -o $(ASSEMBLE_DIR)/$*.map.asm -t MAP
+	@#echo "  Generating MAP source..."
+	@#cicsbms -m $< -o $(ASSEMBLE_DIR)/$*.map.asm -t MAP
 	@# Step 2: Assemble MAP to object
-	@echo "  Assembling MAP..."
-	@$(AS) $(AS_FLAGS) -o $(OBJ_DIR)/$*.o $(ASSEMBLE_DIR)/$*.map.asm
+	@#echo "  Assembling MAP..."
+	@#$(AS) $(AS_FLAGS) -o $(OBJ_DIR)/$*.o $(ASSEMBLE_DIR)/$*.map.asm
 	@# Step 3: Link MAP object to LOADLIB
-	@echo "  Linking MAP to $(LOADLIB)($*)..."
-	@ld -b rent -b case=mixed -e $* -o "//$(LOADLIB)($*)" $(OBJ_DIR)/$*.o
+	@#echo "  Linking MAP to $(LOADLIB)($*)..."
+	@#ld -b rent -b case=mixed -e $* -o "//$(LOADLIB)($*)" $(OBJ_DIR)/$*.o
 	@# Step 4: Generate DSECT assembler source
-	@echo "  Generating DSECT source..."
-	@cicsbms -m $< -o $(ASSEMBLE_DIR)/$*.dsect.asm -t DSECT
+	@echo "  Generating Copy Book..."
+	as --'SYSPARM(DSECT)' -I"CICSTS62.CICS.SDFHMAC" -o $@.oneline $(BMS_SRC_DIR)/$*.bms || [ $$? -le 4 ]
+	fold <$@.oneline | iconv -T -f ISO8859-1 -t IBM-1047 >$@
+	rm $@.oneline
+	@#cicsbms -m $< -o $(ASSEMBLE_DIR)/$*.dsect.asm -t DSECT
 	@# Step 5: Assemble DSECT to copybook
-	@echo "  Assembling DSECT..."
-	@$(AS) $(AS_FLAGS) -o $(DSECT_DIR)/$*.cpy $(ASSEMBLE_DIR)/$*.dsect.asm
+	@#echo "  Assembling DSECT..."
+	@#$(AS) $(AS_FLAGS) -o $(DSECT_DIR)/$*.cpy $(ASSEMBLE_DIR)/$*.dsect.asm
 	@# Step 6: Copy DSECT to MVS dataset
-	@echo "  Copying DSECT to $(DSECT_LIB)($*)..."
-	@cp -F rec $(DSECT_DIR)/$*.cpy "//$(DSECT_LIB)($*)"
-	@touch $@
-	@echo "✓ $* assembled successfully"
+	@#echo "  Copying DSECT to $(DSECT_LIB)($*)..."
+	@#cp -F rec $(DSECT_DIR)/$*.cpy "//$(DSECT_LIB)($*)"
+	@#touch $@
+	@echo "$* assembled successfully"
 
 # Clean assembly artifacts
 clean-assemble:
@@ -70,14 +73,14 @@ help-assemble:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make assemble-maps              - Assemble all BMS maps"
-	@echo "  make $(ASSEMBLE_STAMP_DIR)/<MAP>.stamp - Assemble specific map"
+	@echo "  make $(BMS_MACRO_DIR)/<MAP>.stamp - Assemble specific map"
 	@echo "  make clean-assemble             - Remove assembly artifacts"
 	@echo "  make list-maps                  - List all BMS maps"
 	@echo "  make status-assemble            - Show assembly status"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make assemble-maps                      # Assemble all maps"
-	@echo "  make $(ASSEMBLE_STAMP_DIR)/BNK1ACC.stamp # Assemble BNK1ACC only"
+	@echo "  make $(BMS_MACRO_DIR)/BNK1ACC.stamp # Assemble BNK1ACC only"
 	@echo "  make -j4 assemble-maps                  # Assemble with 4 parallel jobs"
 	@echo "  make clean-assemble assemble-maps       # Clean and reassemble all"
 	@echo ""
@@ -87,7 +90,7 @@ help-assemble:
 	@echo "  Load modules: $(LOADLIB)"
 	@echo "  DSECTs: $(DSECT_LIB)"
 	@echo ""
-	@echo "Note: Stamp files in $(ASSEMBLE_STAMP_DIR) track assembly status"
+	@echo "Note: Stamp files in $(BMS_MACRO_DIR) track assembly status"
 	@echo ""
 
 # List all maps
@@ -126,10 +129,10 @@ status-assemble:
 		echo "  ✗ DSECT directory not found"; \
 	fi
 	@echo ""
-	@echo "Assembly stamp directory: $(ASSEMBLE_STAMP_DIR)"
-	@if [ -d "$(ASSEMBLE_STAMP_DIR)" ]; then \
+	@echo "Assembly stamp directory: $(BMS_MACRO_DIR)"
+	@if [ -d "$(BMS_MACRO_DIR)" ]; then \
 		echo "  ✓ Stamp directory exists"; \
-		echo "  Stamps: $$(ls -1 $(ASSEMBLE_STAMP_DIR)/*.stamp 2>/dev/null | wc -l)"; \
+		echo "  Stamps: $$(ls -1 $(BMS_MACRO_DIR)/*.stamp 2>/dev/null | wc -l)"; \
 	else \
 		echo "  ✗ Stamp directory not found (will be created on first assembly)"; \
 	fi
@@ -153,8 +156,3 @@ status-assemble:
 	fi
 	@echo ""
 
-# Dependency: stamps depend on BMS source files
-# If BMS source is newer than stamp, reassemble
-$(MAP_STAMPS): $(ASSEMBLE_STAMP_DIR)/%.stamp: $(BMS_SRC_DIR)/%.bms
-
-# Made with Bob
