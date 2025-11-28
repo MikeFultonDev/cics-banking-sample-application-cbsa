@@ -1,5 +1,5 @@
 # CBSA COBOL Compilation Makefile
-# Incremental compilation using cob2 compiler interface in USS
+# Incremental compilation using COBCC compiler interface in USS
 # Use the bash shell and if a command in a pipe fails, fail immediately.
 SHELL := /bin/env bash
 .SHELLFLAGS := -e -u -c
@@ -10,9 +10,9 @@ SHELL := /bin/env bash
 # are defined in the main Makefile
 
 # Compiler settings
-COB2 := cob2
+COBCC := cobcc
 COBOL_FLAGS := -comprc_ok=4 -qrent -qlist -qxref -qmap -qapost
-CICS_FLAGS := -qcics
+CICS_FLAGS := -qcics -q'COPYLOC(DSN(CICSTS62.CICS.SDFHCOB))' -q'COPYLOC(DSN(CEE.SCEESAMP))'
 DB2_FLAGS := -q"sql('CCSID(1140)')" -q'codepage(1140)' -dbrmlib
 
 # COBOL source files (from cobol_src.md analysis)
@@ -32,13 +32,13 @@ BATCH_OBJS := $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(BATCH_PROGRAMS)))
 ALL_OBJS := $(CICS_OBJS) $(BATCH_OBJS)
 
 # Load modules
-CICS_LOADS := $(addprefix $(LOAD_DIR)/,$(CICS_PROGRAMS))
-BATCH_LOADS := $(addprefix $(LOAD_DIR)/,$(BATCH_PROGRAMS))
+CICS_LOADS := $(addprefix $(LOAD_DIR)/,$(addsuffix .exe,$(CICS_PROGRAMS)))
+BATCH_LOADS := $(addprefix $(LOAD_DIR)/,$(addsuffix .exe,$(BATCH_PROGRAMS)))
 ALL_LOADS := $(CICS_LOADS) $(BATCH_LOADS)
 
 # Target for compiling all COBOL programs (called from main Makefile)
 cobol-programs: $(ALL_OBJS) $(ALL_LOADS)
-	@echo "✓ COBOL compilation complete: $(words $(ALL_LOADS)) programs built"
+	@echo "COBOL compilation complete: $(words $(ALL_LOADS)) programs built"
 
 # Create build directories
 $(OBJ_DIR) $(LOAD_DIR):
@@ -50,16 +50,11 @@ $(OBJ_DIR) $(LOAD_DIR):
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cbl
 	@echo "Compiling CICS program: $*"
 	( \
-		cd $(LOAD_DIR); \
-		$(COB2) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
-		-I$(abspath $(COPY_DIR)) \
+		cd $(OBJ_DIR); \
+		$(COBCC) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
+		-I$(abspath $(COPY_DIR)) -I$(abspath $(BMS_MACRO_DIR)) \
 		-c \
 		$(abspath $<) \
-		2>&1 >/dev/null | iconv -T -f IBM-1047 -t ISO8859-1 >&2; \
-		RC=$${PIPESTATUS[0]}; \
-		if [ $$RC -ne 0 ]; then \
-			exit $$RC; \
-		fi \
 	)
 	@echo "$* compiled successfully"
 
@@ -67,18 +62,21 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cbl
 $(OBJ_DIR)/BANKDATA.o: $(SRC_DIR)/BANKDATA.cbl
 	@echo "Compiling batch program: BANKDATA"
 	( \
-		cd $(LOAD_DIR); \
-		$(COB2) $(COBOL_FLAGS) $(DB2_FLAGS) \
-		-I$(abspath $(COPY_DIR)) \
+		cd $(OBJ_DIR); \
+		$(COBCC) $(COBOL_FLAGS) $(DB2_FLAGS) \
+		-I$(abspath $(COPY_DIR)) -I$(abspath $(BMS_MACRO_DIR)) \
 		-c \
 		$(abspath $<) \
-		2>&1 >/dev/null | cat >&2;\
-		RC=$${PIPESTATUS[0]}; \
-		if [ $$RC -ne 0 ]; then \
-			exit $$RC; \
-		fi \
 	)		
 	@echo "BANKDATA compiled successfully"
+
+$(LOAD_DIR)/%.exe : $(OBJ_DIR)/%.o
+	@echo "Binding load module: $*"
+	( \
+		cd $(LOAD_DIR); \
+		$(LD) $(LD_FLAGS) -o $*.exe $(abspath $<) \
+	)
+	@echo "$* bound successfully"
 
 # Clean build artifacts
 clean-cobol:
@@ -160,16 +158,12 @@ status-cobol:
 		echo "  ✗ Build directory not found (will be created on first build)"; \
 	fi
 	@echo ""
-	@echo "Compiler: $(COB2)"
-	@if command -v $(COB2) >/dev/null 2>&1; then \
+	@echo "Compiler: $(COBCC)"
+	@if command -v $(COBCC) >/dev/null 2>&1; then \
 		echo "  ✓ Compiler available"; \
 	else \
 		echo "  ✗ Compiler not found in PATH"; \
 	fi
 	@echo ""
-
-# Dependency tracking (simplified - assumes all programs depend on all copybooks)
-# For more sophisticated dependency tracking, consider using makedepend or similar
-$(ALL_LOADS):
-		$(LD) $(LD_FLAGS) -o $(LOAD_DIR)/$(notdir $@) $(OBJ_DIR)/$(notdir $@).o \
-		2>/tmp/$$.err >/tmp/$$.out
+ 
+ 

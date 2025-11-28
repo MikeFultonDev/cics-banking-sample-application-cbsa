@@ -49,7 +49,7 @@ from zoautil_py.exceptions import (
 
 #### compile_program()
 - **Before:** Created JCL to invoke IGYCRCTL and submitted via `jobs.submit()`
-- **After:** Uses USS `cob2` command directly via `subprocess.run()`
+- **After:** Uses USS `COBCC` command directly via `subprocess.run()`
 - **Benefits:**
   - Native USS compilation without JCL overhead
   - Direct command-line interface with standard options
@@ -60,7 +60,7 @@ from zoautil_py.exceptions import (
   
 **Key Changes:**
 - Parameters changed from dataset names to USS file paths
-- Uses `-qCICS`, `-qSQL`, `-qRENT` and other cob2 options
+- Uses `-qCICS`, `-qSQL`, `-qRENT` and other COBCC options
 - Copybook paths specified with `-I` option
 - Output object file specified with `-o` option
 - DBRM output controlled with `-qDBRM` option
@@ -110,7 +110,7 @@ The refactored implementation maintains **100% backward compatibility** with exi
 
 ## USS Commands Used
 
-### cob2
+### COBCC
 - Native USS COBOL compiler command
 - Used for compiling COBOL programs directly in USS
 - Supports CICS (`-qCICS`), SQL (`-qSQL`), and other options
@@ -128,7 +128,7 @@ The refactored implementation maintains **100% backward compatibility** with exi
 5. **Features**: Access to advanced ZOAU features (dataset operations, program execution, etc.)
 6. **Portability**: ZOAU is the IBM-supported standard for z/OS automation
 7. **Type Safety**: Better IDE support with type hints from stub files
-8. **USS Integration**: Native USS commands (cob2) for better file system integration
+8. **USS Integration**: Native USS commands (COBCC) for better file system integration
 
 ## Testing Considerations
 
@@ -155,7 +155,7 @@ These are expected and will not occur when running on z/OS with ZOAU installed.
 - [x] Refactor DB2Utilities.execute_sql() to use mvscmd.execute()
 - [x] Update check_prerequisites() to verify ZOAU availability
 - [x] Remove unused MVSCommand.copy_member() method
-- [x] Remove unused CobolCompiler class (compilation handled by makefiles using cob2)
+- [x] Remove unused CobolCompiler class (compilation handled by makefiles using COBCC)
 - [x] Document all changes
 
 ## API Changes
@@ -211,4 +211,4 @@ Potential improvements using ZOAU capabilities:
 3. Use `datasets.search()` for content searching
 4. Implement GDG support using `zoautil_py.gdgs` module
 5. Add support for c89/xlc compilation for C programs
-6. Implement parallel compilation using multiple cob2 processes
+6. Implement parallel compilation using multiple COBCC processes

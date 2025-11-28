@@ -1,0 +1,15 @@
+#!/bin/env bash
+# Wrapper program for 'ld' to get the output properly tagged
+
+OUT=/tmp/ld_$$.out
+ERR=/tmp/ld_$$.err
+ld $@ >${OUT} 2>${ERR}
+rc=$?
+chtag -tc IBM-1047 ${OUT}
+chtag -tc IBM-1047 ${ERR}
+
+cat ${OUT}
+cat ${ERR} >&2
+rm -f ${OUT} ${ERR}
+
+exit $rc

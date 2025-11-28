@@ -1,0 +1,14 @@
+#!/bin/env bash
+# Wrapper program for 'cob2' to get the output properly tagged
+
+OUT=/tmp/cob2_$$.out
+ERR=/tmp/cob2_$$.err
+cob2 $@ >${OUT} 2>${ERR}
+rc=$?
+chtag -tc IBM-1047 ${OUT}
+chtag -tc IBM-1047 ${ERR}
+
+cat ${OUT}
+cat ${ERR} >&2
+rm -f ${OUT} ${ERR}
+exit $rc

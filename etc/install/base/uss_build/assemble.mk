@@ -4,11 +4,11 @@
 
 .PHONY: clean-assemble help-assemble list-maps status-assemble
 
-# Note: Common variables (BMS_SRC_DIR, BUILD_DIR, OBJ_DIR, DSECT_DIR,
+# Note: Common variables (BMS_SRC_DIR, BUILD_DIR, OBJ_DIR, BMS_MACRO_DIR,
 # LOADLIB_HLQ, LOADLIB, DSECT_LIB) are defined in the main Makefile
 
 # Assembly-specific directories
-BMS_MACRO_DIR := $(BUILD_DIR)/bmsmac
+
 BMS_OBJ_DIR := $(BUILD_DIR)/bmsobj
 
 # Assembler settings

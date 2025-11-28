@@ -480,7 +480,7 @@ make install
 - Check file permissions on Python scripts (`chmod +x *.py`)
 
 **3. Compilation failures**
-- Check COBOL compiler (`cob2`) is available
+- Check COBOL compiler (`COBCC`) is available
 - Verify copybook paths in configuration
 - Check build directory permissions
 - Review compilation output in terminal

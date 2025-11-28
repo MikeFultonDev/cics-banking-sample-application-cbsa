@@ -12,7 +12,7 @@ LINK_DIR := $(BUILD_DIR)/link
 LINK_STAMP_DIR := $(LINK_DIR)/stamps
 
 # Link command
-LD := ld
+LD := ldc
 LD_FLAGS := -b rent -b case=mixed
 
 # Standard CICS programs (29 programs)

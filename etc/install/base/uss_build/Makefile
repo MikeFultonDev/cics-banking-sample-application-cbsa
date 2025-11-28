@@ -24,9 +24,9 @@ BMS_SRC_DIR := $(REL_ROOT_DIR)/src/base/bms_src
 BUILD_DIR := etc/build
 OBJ_DIR := $(BUILD_DIR)/obj
 DBRM_DIR := $(BUILD_DIR)/dbrm
-DSECT_DIR := $(BUILD_DIR)/dsect
 LOAD_DIR := $(BUILD_DIR)/load
 BIND_DIR := $(BUILD_DIR)/bind
+BMS_MACRO_DIR := $(BUILD_DIR)/bmsmac
 
 # Ensure build directories exist
 $(shell mkdir -p $(OBJ_DIR) $(DBRM_DIR) $(DSECT_DIR) $(LOAD_DIR) $(BIND_DIR))
