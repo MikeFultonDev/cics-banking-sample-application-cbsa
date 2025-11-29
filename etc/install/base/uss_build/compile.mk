@@ -1,8 +1,6 @@
 # CBSA COBOL Compilation Makefile
 # Incremental compilation using COBCC compiler interface in USS
 # Use the bash shell and if a command in a pipe fails, fail immediately.
-SHELL := /bin/env bash
-.SHELLFLAGS := -e -u -c
 
 .PHONY: clean-cobol help-cobol list-programs status-cobol
 

@@ -63,19 +63,11 @@ def execute_db2_command(systsin_file: str, sysin_file: str, verbose: bool = Fals
     
     # Define DD statements for IKJEFT1B
     dds = [
-        DDStatement('SYSTSPRT', FileDefinition('*', disposition='NEW')),
-        DDStatement('SYSTSIN', FileDefinition(
-            systsin_file,
-            normal_disposition='SHR',
-            status_group='OLD'
-        )),
-        DDStatement('SYSPRINT', FileDefinition('*', disposition='NEW')),
-        DDStatement('SYSUDUMP', FileDefinition('*', disposition='NEW')),
-        DDStatement('SYSIN', FileDefinition(
-            sysin_file,
-            normal_disposition='SHR',
-            status_group='OLD'
-        ))
+        DDStatement('SYSTSPRT', FileDefinition('*')),
+        DDStatement('SYSTSIN', FileDefinition(systsin_file)),
+        DDStatement('SYSPRINT', FileDefinition('*')),
+        DDStatement('SYSUDUMP', FileDefinition('*')),
+        DDStatement('SYSIN', FileDefinition(sysin_file))
     ]
     
     try:
@@ -96,7 +88,7 @@ def execute_db2_command(systsin_file: str, sysin_file: str, verbose: bool = Fals
         if response.stderr_response:
             print(response.stderr_response, file=sys.stderr)
         
-        if verbose:
+        if verbose or response.rc != 0:
             print(f"\nReturn code: {response.rc}")
         
         return response.rc

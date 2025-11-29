@@ -15,3 +15,5 @@
 # BMS Maps
 *.bms working-tree-encoding=IBM-1047
 *.BMS working-tree-encoding=IBM-1047
+
+etc/install/base/uss_build/bin/envsubst binary

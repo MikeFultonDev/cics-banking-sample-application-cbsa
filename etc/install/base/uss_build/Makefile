@@ -1,15 +1,11 @@
 # CBSA USS Build System Makefile
 # GNU Make-based build orchestration for CICS Banking Sample Application
-
-$(shell echo "pb" $(PWD) >/tmp/out)
+SHELL := /bin/env bash
+.SHELLFLAGS := -e -u -c
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 mkfile_dir := $(dir $(mkfile_path))
 
-$(shell echo "x" $(MAKEFILE_LIST) >>/tmp/out)
-$(shell echo "y" $(mkfile_path) >>/tmp/out)
-$(shell echo "z" $(mkfile_dir) >>/tmp/out)
-$(shell echo "pa" $(PWD) >>/tmp/out)
 # Common build configuration
 # These variables are shared across compile.mk, assemble.mk, and link.mk
 
@@ -22,14 +18,14 @@ BMS_SRC_DIR := $(REL_ROOT_DIR)/src/base/bms_src
 # Build directories
 
 BUILD_DIR := etc/build
+
 OBJ_DIR := $(BUILD_DIR)/obj
 DBRM_DIR := $(BUILD_DIR)/dbrm
 LOAD_DIR := $(BUILD_DIR)/load
-BIND_DIR := $(BUILD_DIR)/bind
 BMS_MACRO_DIR := $(BUILD_DIR)/bmsmac
 
 # Ensure build directories exist
-$(shell mkdir -p $(OBJ_DIR) $(DBRM_DIR) $(DSECT_DIR) $(LOAD_DIR) $(BIND_DIR))
+$(shell mkdir -p $(BUILD_DIR) $(OBJ_DIR) $(DBRM_DIR) $(LOAD_DIR))
 
 # Target MVS datasets
 LOADLIB_HLQ ?= CBSA.CICSBSA
@@ -39,7 +35,6 @@ DSECT_LIB := $(LOADLIB_HLQ).DSECT
 # Include COBOL compilation, BMS assembly, linking, and DB2 makefiles
 include $(mkfile_dir)/compile.mk
 include $(mkfile_dir)/assemble.mk
-include $(mkfile_dir)/link.mk
 include $(mkfile_dir)/db2.mk
 
 .PHONY: all db2bind-clean db2bind-help install setup-db2 compile assemble link db2bind populate verify \

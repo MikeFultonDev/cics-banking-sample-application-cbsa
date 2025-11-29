@@ -13,7 +13,7 @@ DB2SQL_DIR := $(mkfile_dir)/db2sql
 -include build.conf
 
 # DB2 Configuration variables (with defaults)
-DB2_HLQ ?= DSNC10
+DB2_HLQ ?= DB2V13
 DB2_SUBSYSTEM ?= DBCG
 DB2_OWNER ?= IBMUSER
 DB2_PLAN ?= CBSA
@@ -84,13 +84,13 @@ db2-help:
 # Create all DB2 artifacts using INSTDB2.jcl
 db2-create: db2-create-database db2-create-stogroups db2-create-tablespaces \
             db2-create-tables db2-create-indexes
-	@echo "✓ All DB2 artifacts created successfully"
+	@echo "All DB2 artifacts created successfully"
 
 # Create database
 db2-create-database:
 	@echo "Creating CBSA database..."
 	@$(call run_db2cmd,CREDB00)
-	@echo "✓ Database created"
+	@echo "Database created"
 
 # Create storage groups
 db2-create-stogroups:
@@ -98,7 +98,7 @@ db2-create-stogroups:
 	@$(call run_db2cmd,CRESG01)
 	@$(call run_db2cmd,CRESG02)
 	@$(call run_db2cmd,CRESG03)
-	@echo "✓ Storage groups created"
+	@echo "Storage groups created"
 
 # Create tablespaces
 db2-create-tablespaces:
@@ -106,7 +106,7 @@ db2-create-tablespaces:
 	@$(call run_db2cmd,CRETS01)
 	@$(call run_db2cmd,CRETS02)
 	@$(call run_db2cmd,CRETS03)
-	@echo "✓ Tablespaces created"
+	@echo "Tablespaces created"
 
 # Create tables
 db2-create-tables:
@@ -122,48 +122,48 @@ db2-create-indexes:
 	@$(call run_db2cmd,CREI101)
 	@$(call run_db2cmd,CREI201)
 	@$(call run_db2cmd,CREI301)
-	@echo "✓ Indexes created"
+	@echo "Indexes created"
 
 # Bind all packages and plan
 db2-bind-all: db2-bind-packages db2-bind-plan db2-grant
-	@echo "✓ DB2 binding complete"
+	@echo "DB2 binding complete"
 
 # Bind DB2 packages
 db2-bind-packages:
 	@echo "Binding DB2 packages..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/DB2BIND.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Package binding job submitted"
+	@echo "Package binding job submitted"
 
 # Bind DB2 plan (requires packages to exist)
 db2-bind-plan:
 	@echo "Binding DB2 plan..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/DB2BIND.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Plan binding job submitted"
+	@echo "Plan binding job submitted"
 
 # Grant permissions
 db2-grant:
 	@echo "Granting permissions to $(BANK_USER)..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/DB2BIND.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Grant job submitted"
+	@echo "Grant job submitted"
 
 # Drop all DB2 artifacts
 db2-drop:
 	@echo "Dropping all DB2 artifacts..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/DROPDB2.jcl) | $(SUBMIT_JCL)
 	@echo "✓ Drop job submitted"
-	@echo "⚠ Warning: This will delete all CBSA database objects"
+	@echo "Warning: This will delete all CBSA database objects"
 
 # Test DB2 connection
 db2-test:
 	@echo "Testing DB2 connection..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/BTCHSQL.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Test query job submitted"
+	@echo "Test query job submitted"
 
 # Alternative: Create everything using single INSTDB2.jcl
 db2-install-single:
 	@echo "Creating all DB2 artifacts using INSTDB2.jcl..."
 	@$(call substitute_jcl,$(DB2JCL_DIR)/INSTDB2.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Installation job submitted"
+	@echo "Installation job submitted"
 	@echo "Note: This creates database, storage groups, tablespaces, tables, and indexes"
 
 # Show current DB2 configuration
@@ -183,6 +183,6 @@ db2-show-config:
 
 # Rebuild DB2 (drop and recreate)
 db2-rebuild: db2-drop db2-create db2-bind-all
-	@echo "✓ DB2 rebuild complete"
+	@echo "DB2 rebuild complete"
 
 # Made with Bob
