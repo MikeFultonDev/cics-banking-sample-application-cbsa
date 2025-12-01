@@ -1,5 +1,5 @@
 # CBSA DB2 Management Makefile
-# Manages DB2 database, tables, indexes, packages, and plans using db2cmd.py
+# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd.py
 # Copyright IBM Corp. 2023, 2025
 
 .PHONY: db2-help db2-create db2-drop db2-bind-packages db2-bind-plan db2-bind-all \
@@ -25,29 +25,31 @@ DB2_DSNTEP_LOADLIB ?= $(DSN_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DSNV12DP
 BANK_USER ?= CICSUSER
 
-# db2cmd.py command
-DB2CMD := $(mkfile_dir)/bin/db2cmd.py
+# batchtsocmd.py command
+BATCHTSOCMD := $(mkfile_dir)/bin/batchtsocmd.py
 
-#mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; 
+#	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; 
+#	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
 
 # Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
 define run_db2cmd
-	@echo "Executing $(1)..."
-	@SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
+	@echo "Running $(1)..."
+	SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
 	SYSIN_PIPE=/tmp/sysin_$(1)_$$$$.pipe; \
 	export DB2_HLQ='$(DB2_HLQ)' \
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
+		   DSN_HLQ='$(DSN_HLQ)' \
 	       DB2_OWNER='$(DB2_OWNER)' \
-	       BANK_PLAN='$(DB2_PLAN)' \
-	       BANK_PACKAGE='$(DB2_PACKAGE)' \
+		   DB2_DB='$(DB2_DB)' \
+	       DB2_PLAN='$(DB2_PLAN)' \
+	       DB2_PACKAGE='$(DB2_PACKAGE)' \
 	       DB2_DSNTEP_PLAN='$(DB2_DSNTEP_PLAN)' \
 	       DB2_DSNTEP_LOADLIB='$(DB2_DSNTEP_LOADLIB)' \
 	       DB2_VCAT='$(DB2_VCAT)' \
 	       BANK_USER='$(BANK_USER)'; \
 	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE ); \
 	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE ); \
-	$(DB2CMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE; \
-	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
+	$(BATCHTSOCMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE --steplib $(DB2_HLQ).SDSNLOAD;
 endef
 
 # DB2 Help

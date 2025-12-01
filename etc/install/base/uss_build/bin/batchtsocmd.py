@@ -21,23 +21,55 @@ def is_named_pipe(path: str) -> bool:
         return False
 
 
-def get_file_encoding(path: str) -> str:
+def get_file_encoding(path: str, verbose: bool = False) -> str:
     """
-    Get the encoding tag of a file.
+    Get the encoding tag of a file using ls -T command.
     Returns 'IBM-1047' for EBCDIC, 'ISO8859-1' for ASCII, or 'untagged'
     """
     try:
-        # Get file tag using os.stat_result
-        stat_result = os.stat(path)
-        # Check if file has a tag attribute
-        if hasattr(stat_result, 'st_tag'):
-            tag = stat_result.st_tag
-            if tag.ccsid == 1047:
-                return 'IBM-1047'
-            elif tag.ccsid == 819:  # ISO8859-1
-                return 'ISO8859-1'
+        # Use ls -T to get file tag information on z/OS
+        import subprocess
+        result = subprocess.run(['ls', '-T', path],
+                              capture_output=True,
+                              text=True,
+                              encoding='iso8859-1')
+        
+        if result.returncode == 0:
+            output = result.stdout.strip()
+            if verbose:
+                print(f"DEBUG: ls -T output for {path}: {output}")
+            
+            # Parse the output - format is like: "t ISO8859-1   T=on  -rw-r--r--..."
+            parts = output.split()
+            if len(parts) > 1:
+                # First part is 't' or 'b' or '-' (text/binary/untagged)
+                # Second part is the codeset name
+                tag_type = parts[0]
+                if tag_type == 't' and len(parts) > 1:
+                    codeset = parts[1]
+                    if verbose:
+                        print(f"DEBUG: Detected codeset: {codeset}")
+                    
+                    if codeset == 'IBM-1047':
+                        return 'IBM-1047'
+                    elif codeset == 'ISO8859-1':
+                        return 'ISO8859-1'
+                    else:
+                        if verbose:
+                            print(f"DEBUG: Unknown codeset: {codeset}")
+                        return 'untagged'
+                elif tag_type == '-':
+                    if verbose:
+                        print(f"DEBUG: File is untagged")
+                    return 'untagged'
+        
+        if verbose:
+            print(f"DEBUG: Could not determine encoding from ls -T")
         return 'untagged'
-    except (OSError, AttributeError):
+        
+    except Exception as e:
+        if verbose:
+            print(f"DEBUG: Exception in get_file_encoding for {path}: {e}")
         return 'untagged'
 
 
@@ -55,7 +87,7 @@ def convert_to_ebcdic(input_path: str, output_path: str, verbose: bool = False) 
         True if successful, False otherwise
     """
     try:
-        encoding = get_file_encoding(input_path)
+        encoding = get_file_encoding(input_path, verbose)
         
         if verbose:
             print(f"Input encoding detected: {encoding}")
@@ -108,7 +140,8 @@ def validate_input_file(path: str, name: str) -> bool:
 
 
 def execute_tso_command(systsin_file: str, sysin_file: str,
-                       systsprt_file: str, sysprint_file: str,
+                       systsprt_file: str | None = None,
+                       sysprint_file: str | None = None,
                        steplib: str | None = None, verbose: bool = False) -> int:
     """
     Execute TSO command using IKJEFT1B with SYSTSIN and SYSIN inputs
@@ -116,8 +149,8 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
     Args:
         systsin_file: Path to SYSTSIN input file or named pipe
         sysin_file: Path to SYSIN input file or named pipe
-        systsprt_file: Path to SYSTSPRT output file or named pipe
-        sysprint_file: Path to SYSPRINT output file or named pipe
+        systsprt_file: Optional path to SYSTSPRT output file or named pipe (defaults to DUMMY)
+        sysprint_file: Optional path to SYSPRINT output file or named pipe (defaults to stdout)
         steplib: Optional STEPLIB dataset name
         verbose: Enable verbose output
     
@@ -143,6 +176,7 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
     # Create temporary files for EBCDIC conversion
     temp_systsin = None
     temp_sysin = None
+    temp_sysprint = None
     
     try:
         # Convert SYSTSIN to EBCDIC
@@ -168,17 +202,41 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
             if verbose:
                 print(f"STEPLIB: {steplib}")
         
+        # Add SYSTSPRT - use DUMMY if not specified
+        if systsprt_file:
+            dds.append(DDStatement('SYSTSPRT', FileDefinition(systsprt_file)))
+        else:
+            dds.append(DDStatement('SYSTSPRT', FileDefinition('DUMMY')))
+            if verbose:
+                print("SYSTSPRT: DUMMY")
+        
+        # Add SYSTSIN
+        dds.append(DDStatement('SYSTSIN', FileDefinition(temp_systsin.name)))
+        
+        # Add SYSPRINT - use stdout if not specified, tagged as IBM-1047
+        if sysprint_file:
+            dds.append(DDStatement('SYSPRINT', FileDefinition(sysprint_file)))
+        else:
+            # Create a temporary file for stdout that will be tagged
+            temp_sysprint = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.sysprint')
+            temp_sysprint.close()
+            os.system(f"chtag -tc IBM-1047 {temp_sysprint.name}")
+            dds.append(DDStatement('SYSPRINT', FileDefinition(temp_sysprint.name)))
+            if verbose:
+                print("SYSPRINT: stdout (tagged as IBM-1047)")
+        
         # Add remaining DD statements
         dds.extend([
-            DDStatement('SYSTSPRT', FileDefinition(systsprt_file)),
-            DDStatement('SYSTSIN', FileDefinition(temp_systsin.name)),
-            DDStatement('SYSPRINT', FileDefinition(sysprint_file)),
             DDStatement('SYSUDUMP', FileDefinition('DUMMY')),
             DDStatement('SYSIN', FileDefinition(temp_sysin.name))
         ])
         
         if verbose:
             print("Executing IKJEFT1B via mvscmdauth...")
+            print("\nDD Statements:")
+            for dd in dds:
+                print(f"  {dd.name}: {dd.definition}")
+            print()
         
         # Execute IKJEFT1B using mvscmdauth
         response = mvscmd.execute_authorized(
@@ -187,16 +245,28 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
             verbose=verbose
         )
         
+        # If SYSPRINT was sent to temp file (stdout), read and print it
+        if not sysprint_file and temp_sysprint:
+            try:
+                with open(temp_sysprint.name, 'r', encoding='ibm1047') as f:
+                    print(f.read())
+            except Exception as e:
+                if verbose:
+                    print(f"Warning: Could not read SYSPRINT output: {e}", file=sys.stderr)
+            finally:
+                if os.path.exists(temp_sysprint.name):
+                    os.unlink(temp_sysprint.name)
+        
         if verbose or response.rc != 0:
             print(f"\nReturn code: {response.rc}")
         
         # Tag output files as IBM-1047
-        if not is_named_pipe(systsprt_file):
+        if systsprt_file and not is_named_pipe(systsprt_file):
             os.system(f"chtag -tc IBM-1047 {systsprt_file}")
             if verbose:
                 print(f"Tagged {systsprt_file} as IBM-1047")
         
-        if not is_named_pipe(sysprint_file):
+        if sysprint_file and not is_named_pipe(sysprint_file):
             os.system(f"chtag -tc IBM-1047 {sysprint_file}")
             if verbose:
                 print(f"Tagged {sysprint_file} as IBM-1047")
@@ -223,7 +293,11 @@ def main():
         epilog="""
 Examples:
   # Using regular files
-  batchtsocmd.py --systsin systsin.txt --sysin input.txt --systsprt output.txt --sysprint print.txt
+  batchtsocmd.py --systsin systsin.txt --sysin input.txt
+  
+  # With output files
+  batchtsocmd.py --systsin systsin.txt --sysin input.txt \\
+                 --systsprt output.txt --sysprint print.txt
   
   # Using named pipes
   mkfifo /tmp/systsin.pipe /tmp/sysin.pipe /tmp/systsprt.pipe /tmp/sysprint.pipe
@@ -232,12 +306,13 @@ Examples:
   
   # With STEPLIB and verbose output
   batchtsocmd.py --systsin systsin.txt --sysin input.txt \\
-                 --systsprt output.txt --sysprint print.txt \\
                  --steplib DB2V13.SDSNLOAD --verbose
 
 Note: Input files can be ASCII (ISO8859-1) or EBCDIC (IBM-1047).
       Untagged files are assumed to be EBCDIC.
       Output files will be tagged as IBM-1047.
+      If --systsprt is not specified, output goes to DUMMY.
+      If --sysprint is not specified, output goes to stdout (tagged as IBM-1047).
 """
     )
     
@@ -255,14 +330,12 @@ Note: Input files can be ASCII (ISO8859-1) or EBCDIC (IBM-1047).
     
     parser.add_argument(
         '--systsprt',
-        required=True,
-        help='Path to SYSTSPRT output file or named pipe'
+        help='Path to SYSTSPRT output file or named pipe (defaults to DUMMY)'
     )
     
     parser.add_argument(
         '--sysprint',
-        required=True,
-        help='Path to SYSPRINT output file or named pipe'
+        help='Path to SYSPRINT output file or named pipe (defaults to stdout, tagged as IBM-1047)'
     )
     
     parser.add_argument(
