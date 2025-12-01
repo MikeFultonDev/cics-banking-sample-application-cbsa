@@ -28,14 +28,12 @@ BANK_USER ?= CICSUSER
 # batchtsocmd.py command
 BATCHTSOCMD := $(mkfile_dir)/bin/batchtsocmd.py
 
-#	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; 
-#	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
-
 # Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
 define run_db2cmd
 	@echo "Running $(1)..."
-	SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
+	@SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
 	SYSIN_PIPE=/tmp/sysin_$(1)_$$$$.pipe; \
+	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; \
 	export DB2_HLQ='$(DB2_HLQ)' \
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
 		   DSN_HLQ='$(DSN_HLQ)' \
@@ -47,9 +45,10 @@ define run_db2cmd
 	       DB2_DSNTEP_LOADLIB='$(DB2_DSNTEP_LOADLIB)' \
 	       DB2_VCAT='$(DB2_VCAT)' \
 	       BANK_USER='$(BANK_USER)'; \
-	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE ); \
-	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE ); \
-	$(BATCHTSOCMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE --steplib $(DB2_HLQ).SDSNLOAD;
+	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE &); \
+	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE &); \
+	$(BATCHTSOCMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE --steplib $(DB2_HLQ).SDSNLOAD; \
+	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
 endef
 
 # DB2 Help
