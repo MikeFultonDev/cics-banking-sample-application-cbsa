@@ -9,7 +9,7 @@ import os
 import argparse
 import stat
 from zoautil_py import mvscmd
-from zoautil_py.ztypes import DDStatement, FileDefinition
+from zoautil_py.ztypes import DDStatement, FileDefinition, DatasetDefinition
 
 
 def is_named_pipe(path: str) -> bool:
@@ -63,10 +63,11 @@ def execute_db2_command(systsin_file: str, sysin_file: str, verbose: bool = Fals
     
     # Define DD statements for IKJEFT1B
     dds = [
-        DDStatement('SYSTSPRT', FileDefinition('*')),
+        DDStatement('STEPLIB', DatasetDefinition('DB2V13.SDSNLOAD')),
+        DDStatement('SYSTSPRT', FileDefinition('stdout')),
         DDStatement('SYSTSIN', FileDefinition(systsin_file)),
-        DDStatement('SYSPRINT', FileDefinition('*')),
-        DDStatement('SYSUDUMP', FileDefinition('*')),
+        DDStatement('SYSPRINT', FileDefinition('stdout')),
+        DDStatement('SYSUDUMP', FileDefinition('DUMMY')),
         DDStatement('SYSIN', FileDefinition(sysin_file))
     ]
     

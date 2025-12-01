@@ -14,24 +14,27 @@ DB2SQL_DIR := $(mkfile_dir)/db2sql
 
 # DB2 Configuration variables (with defaults)
 DB2_HLQ ?= DB2V13
-DB2_SUBSYSTEM ?= DBCG
+DB2_SUBSYSTEM ?= DBD1
+DSN_HLQ ?= $(DB2_SUBSYSTEM)
 DB2_OWNER ?= IBMUSER
-DB2_PLAN ?= CBSA
-DB2_PACKAGE ?= PCBSA
+DB2_DB ?= CBSAMF
+DB2_PLAN ?= CBSAMF
+DB2_PACKAGE ?= PCBSAMF
 DB2_DSNTEP_PLAN ?= DSNTEP2
-DB2_DSNTEP_LOADLIB ?= $(DB2_HLQ).RUNLIB.LOAD
+DB2_DSNTEP_LOADLIB ?= $(DSN_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DSNV12DP
 BANK_USER ?= CICSUSER
 
 # db2cmd.py command
 DB2CMD := $(mkfile_dir)/bin/db2cmd.py
 
+#mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; 
+
 # Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
 define run_db2cmd
 	@echo "Executing $(1)..."
 	@SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
 	SYSIN_PIPE=/tmp/sysin_$(1)_$$$$.pipe; \
-	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; \
 	export DB2_HLQ='$(DB2_HLQ)' \
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
 	       DB2_OWNER='$(DB2_OWNER)' \
@@ -41,8 +44,8 @@ define run_db2cmd
 	       DB2_DSNTEP_LOADLIB='$(DB2_DSNTEP_LOADLIB)' \
 	       DB2_VCAT='$(DB2_VCAT)' \
 	       BANK_USER='$(BANK_USER)'; \
-	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE &); \
-	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE &); \
+	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE ); \
+	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE ); \
 	$(DB2CMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE; \
 	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
 endef
