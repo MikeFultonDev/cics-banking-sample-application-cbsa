@@ -204,7 +204,7 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
         
         # Add SYSTSPRT - use DUMMY if not specified
         if systsprt_file:
-            dds.append(DDStatement('SYSTSPRT', FileDefinition(systsprt_file)))
+            dds.append(DDStatement('SYSTSPRT', FileDefinition(systsprt_file + ",filedata=binary")))
         else:
             dds.append(DDStatement('SYSTSPRT', FileDefinition('DUMMY')))
             if verbose:
@@ -221,7 +221,7 @@ def execute_tso_command(systsin_file: str, sysin_file: str,
             temp_sysprint = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.sysprint')
             temp_sysprint.close()
             os.system(f"chtag -tc IBM-1047 {temp_sysprint.name}")
-            dds.append(DDStatement('SYSPRINT', FileDefinition(temp_sysprint.name)))
+            dds.append(DDStatement('SYSPRINT', FileDefinition(temp_sysprint.name + ",filedata=binary")))
             if verbose:
                 print("SYSPRINT: stdout (tagged as IBM-1047)")
         

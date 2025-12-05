@@ -1,19 +1,19 @@
 # COBOL files should use IBM-1047 (EBCDIC) encoding
-*.cbl working-tree-encoding=IBM-1047
-*.cob working-tree-encoding=IBM-1047
-*.CBL working-tree-encoding=IBM-1047
-*.COB working-tree-encoding=IBM-1047
+*.cbl zos-working-tree-encoding=IBM-1047
+*.cob zos-working-tree-encoding=IBM-1047
+*.CBL zos-working-tree-encoding=IBM-1047
+*.COB zos-working-tree-encoding=IBM-1047
 
 # COBOL copybooks
-*.cpy working-tree-encoding=IBM-1047
-*.CPY working-tree-encoding=IBM-1047
+*.cpy zos-working-tree-encoding=IBM-1047
+*.CPY zos-working-tree-encoding=IBM-1047
 
 # JCL files
-*.jcl working-tree-encoding=IBM-1047
-*.JCL working-tree-encoding=IBM-1047
+*.jcl zos-working-tree-encoding=IBM-1047
+*.JCL zos-working-tree-encoding=IBM-1047
 
 # BMS Maps
-*.bms working-tree-encoding=IBM-1047
-*.BMS working-tree-encoding=IBM-1047
+*.bms zos-working-tree-encoding=IBM-1047
+*.BMS zos-working-tree-encoding=IBM-1047
 
 etc/install/base/uss_build/bin/envsubst binary
