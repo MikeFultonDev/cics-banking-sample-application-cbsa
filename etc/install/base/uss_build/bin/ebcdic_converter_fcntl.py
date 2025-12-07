@@ -41,7 +41,8 @@ F_CONTROL_CVT = 13  # Control conversion
 # Note: There is no F_GETTAG in z/OS. Use F_CONTROL_CVT with f_cnvrt structure
 # to query file conversion information (which includes CCSID)
 # Define f_cnvrt structure using ctypes for fcntl operations
-class f_cnvrt(ctypes.Structure):
+# z/OS is big-endian, ctypes uses native byte order which is correct
+class f_cnvrt(ctypes.BigEndianStructure):
     """
     z/OS f_cnvrt structure for F_CONTROL_CVT operations.
     
@@ -50,6 +51,8 @@ class f_cnvrt(ctypes.Structure):
         short pccsid;    // Process CCSID
         short fccsid;    // File CCSID
     }
+    
+    Note: Using BigEndianStructure to explicitly specify z/OS byte order.
     """
     _fields_ = [
         ("cvtcmd", ctypes.c_int32),   # 4 bytes
@@ -57,8 +60,9 @@ class f_cnvrt(ctypes.Structure):
         ("fccsid", ctypes.c_int16),   # 2 bytes
     ]  # Total: 8 bytes
 
+
 # Define attrib_t structure for F_SETTAG
-class attrib_t(ctypes.Structure):
+class attrib_t(ctypes.BigEndianStructure):
     """
     z/OS attrib_t structure for F_SETTAG operations.
     
@@ -69,6 +73,8 @@ class attrib_t(ctypes.Structure):
         unsigned short att_ccsid;     // CCSID
         int att_rsvd2[2];             // Reserved (0, 0)
     }
+    
+    Note: Using BigEndianStructure to explicitly specify z/OS byte order.
     """
     _fields_ = [
         ("att_filetagchg", ctypes.c_int32),      # 4 bytes
@@ -77,7 +83,6 @@ class attrib_t(ctypes.Structure):
         ("att_ccsid", ctypes.c_uint16),          # 2 bytes
         ("att_rsvd2", ctypes.c_int32 * 2),       # 8 bytes (array of 2 ints)
     ]  # Total: 20 bytes
-
 
 # CCSID (Coded Character Set ID) mappings
 CCSID_ISO8859_1 = 819   # ASCII/ISO8859-1
@@ -187,9 +192,10 @@ def get_file_encoding_fcntl(path: str, fd: Optional[int] = None,
 def set_file_tag_fcntl(path: str, ccsid: int, text_flag: bool = True,
                       verbose: bool = False) -> bool:
     """
-    Set file tag using z/OS fcntl F_SETTAG operation with ctypes.
+    Set file tag using z/OS fcntl F_SETTAG operation.
     
-    Uses the attrib_t structure with fcntl.fcntl() to set file CCSID tag.
+    Uses the attrib_t structure converted to bytes for fcntl.fcntl().
+    F_SETTAG requires passing the structure as a byte buffer.
     
     Args:
         path: File path to tag
@@ -220,8 +226,16 @@ def set_file_tag_fcntl(path: str, ccsid: int, text_flag: bool = True,
             if verbose:
                 print(f"  Structure: filetagchg={tag.att_filetagchg}, txtflag={tag.att_txtflag}, ccsid={tag.att_ccsid}")
             
-            # Call fcntl with F_SETTAG
-            fcntl.fcntl(fd, F_SETTAG, tag)
+            # Convert structure to bytes for fcntl
+            # F_SETTAG needs the structure passed as a byte buffer
+            tag_bytes = bytes(tag)
+            
+            if verbose:
+                print(f"  Structure size: {len(tag_bytes)} bytes")
+                print(f"  Structure hex: {tag_bytes.hex()}")
+            
+            # Call fcntl with F_SETTAG using byte buffer
+            fcntl.fcntl(fd, F_SETTAG, tag_bytes)
             
             if verbose:
                 print(f"  Successfully set file tag")
