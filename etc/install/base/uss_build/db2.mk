@@ -1,5 +1,5 @@
 # CBSA DB2 Management Makefile
-# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd.py
+# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd package
 # Copyright IBM Corp. 2023, 2025
 
 .PHONY: db2-help db2-create db2-drop db2-bind-packages db2-bind-plan db2-bind-all \
@@ -25,17 +25,17 @@ DB2_DSNTEP_LOADLIB ?= $(DSN_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DBD1
 BANK_USER ?= CICSUSER
 
-# batchtsocmd.py command
-BATCHTSOCMD := $(mkfile_dir)/bin/batchtsocmd.py
+# batchtsocmd command (from PyPI package batchtsocmd>=0.1.4)
+# Uses the CLI interface: batchtsocmd --systsin <file> --sysin <file> [options]
+BATCHTSOCMD := batchtsocmd
 
-# 	mkfifo $$SYSTSIN_PIPE $$SYSIN_PIPE; <-- this goes after SYSIN_PIPE assignment
-#   need & on both the envsubst lines
-
-# Helper function to substitute SQL variables using envsubst and execute db2cmd with named pipes
+# Helper function to substitute SQL variables using envsubst and execute db2cmd with temporary files
+# Note: batchtsocmd handles ASCII to EBCDIC conversion internally via --source-encoding parameter
+# Captures output and prints to stderr on failure, returning the error code
 define run_db2cmd
 	@echo "Running $(1)..."
-	SYSTSIN_PIPE=/tmp/systsin_$(1)_$$$$.pipe; \
-	SYSIN_PIPE=/tmp/sysin_$(1)_$$$$.pipe; \
+	SYSTSIN_FILE=/tmp/systsin_$(1)_$$$$.txt; \
+	SYSIN_FILE=/tmp/sysin_$(1)_$$$$.txt; \
 	export DB2_HLQ='$(DB2_HLQ)' \
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
 		   DSN_HLQ='$(DSN_HLQ)' \
@@ -47,12 +47,17 @@ define run_db2cmd
 	       DB2_DSNTEP_LOADLIB='$(DB2_DSNTEP_LOADLIB)' \
 	       DB2_VCAT='$(DB2_VCAT)' \
 	       BANK_USER='$(BANK_USER)'; \
-	(envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_PIPE); \
-	(envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_PIPE); \
-	a2e $$SYSTSIN_PIPE; \
-	a2e $$SYSIN_PIPE; \
-	$(BATCHTSOCMD) --systsin $$SYSTSIN_PIPE --sysin $$SYSIN_PIPE --steplib $(DB2_HLQ).SDSNLOAD; \
-	rm -f $$SYSTSIN_PIPE $$SYSIN_PIPE
+	envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_FILE; \
+	envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_FILE; \
+	set +e; \
+	OUTPUT=$$($(BATCHTSOCMD) --systsin $$SYSTSIN_FILE --sysin $$SYSIN_FILE --steplib $(DB2_HLQ).SDSNLOAD --source-encoding ISO8859-1 2>&1); \
+	RC=$$?; \
+	set -e; \
+	rm -f $$SYSTSIN_FILE $$SYSIN_FILE; \
+	if [ $$RC -gt 0 ]; then \
+		echo "$$OUTPUT" >&2; \
+		exit $$RC; \
+	fi
 endef
 
 # DB2 Help

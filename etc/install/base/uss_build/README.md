@@ -19,13 +19,28 @@ This directory contains a modern build system for the CICS Banking Sample Applic
 ## Prerequisites
 
 - z/OS UNIX System Services (USS) environment
-- Python 3.6 or later
+- Python 3.12 or later
 - GNU Make
 - Access to TSO commands (`tsocmd`)
 - CICS TS 6.1 or greater
 - DB2 v12 or greater
 - z/OS Connect server (for REST APIs)
 - Appropriate RACF permissions
+
+### Python Dependencies
+
+Install required Python packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+This will install:
+- `batchtsocmd` - For executing TSO commands in batch mode (published package from PyPI)
+- `zos-ccsid-converter` - For EBCDIC/ASCII file conversion (published package from PyPI)
+- Other dependencies as needed
+
+**Note**: The `zoautil_py` package is typically pre-installed on z/OS systems. If not available, contact your system administrator.
 
 ## Directory Structure
 
@@ -54,7 +69,31 @@ uss_build/
 
 ## Quick Start
 
-### 1. Configure the Build
+### 1. Set Up Environment
+
+**IMPORTANT**: Before running any build commands, you must source the `setenv` script to configure the Python environment:
+
+```bash
+# Set CBSADIR to the project root directory
+export CBSADIR=/path/to/cics-banking-sample-application-cbsa
+
+# Source the environment setup script
+source ${CBSADIR}/setenv
+```
+
+The `setenv` script will:
+- Configure the Python environment and PYTHONPATH
+- Check for required Python packages (batchtsocmd, zos-ccsid-converter, zoautil_py)
+- Display warnings if any dependencies are missing
+- Load host-specific configuration if available
+
+If you see warnings about missing packages, install them:
+
+```bash
+pip install -r ${CBSADIR}/etc/install/base/uss_build/requirements.txt
+```
+
+### 2. Configure the Build
 
 Edit [`build.conf`](build.conf:1) to match your environment:
 
@@ -70,13 +109,13 @@ Key settings to update:
 - `CICS_HLQ`: CICS high-level qualifier (e.g., `DFH560.CICS`)
 - `ZOSCONNECT_*`: z/OS Connect paths and ports
 
-### 2. Make Scripts Executable
+### 3. Make Scripts Executable
 
 ```bash
 make setup-scripts
 ```
 
-### 3. Run Complete Installation
+### 4. Run Complete Installation
 
 ```bash
 make install

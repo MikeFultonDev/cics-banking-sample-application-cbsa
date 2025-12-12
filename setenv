@@ -1,6 +1,7 @@
 # Set up the environment for the build
 
 # This file needs to be SOURCEd
+# Usage: source setenv
 # See if there is a host specific config file and source it.
 
 if [ "${CBSADIR}" = '' ] || ! [ -e "${CBSADIR}/setenv" ]; then
@@ -12,4 +13,97 @@ else
   if [ -e "${host_config}" ]; then
     source "${host_config}"
   fi
+  
+  # Set up Python environment for USS build system
+  echo "Setting up Python environment..."
+  
+  # Ensure Python 3 is available
+  if ! command -v python3 &> /dev/null; then
+    echo "WARNING: python3 not found in PATH" >&2
+  else
+    echo "Python version: $(python3 --version)"
+  fi
+  
+  # Check if pip is available
+  if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
+    echo "WARNING: pip not found in PATH" >&2
+  fi
+  
+  # Set PYTHONPATH to include USS build utilities
+  if [ -d "${CBSADIR}/etc/install/base/uss_build" ]; then
+    export PYTHONPATH="${CBSADIR}/etc/install/base/uss_build:${PYTHONPATH}"
+    echo "PYTHONPATH updated to include USS build utilities"
+  fi
+  
+  # Add Python user bin directory to PATH for pip-installed executables
+  # This is where pip installs command-line tools like batchtsocmd
+  if [ -d "${HOME}/.local/bin" ]; then
+    export PATH="${HOME}/.local/bin:${PATH}"
+    echo "PATH updated to include Python user bin directory"
+  fi
+  
+  # Check if required Python packages are installed
+  echo "Checking Python dependencies..."
+  
+  # Check zos-ccsid-converter (required: >=0.1.8)
+  python3 -c "import zos_ccsid_converter" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "WARNING: zos-ccsid-converter package not found" >&2
+    echo "Install with: pip install -r ${CBSADIR}/etc/install/base/uss_build/requirements.txt" >&2
+  else
+    # Check zos-ccsid-converter version
+    CONVERTER_VERSION=$(python3 -c "import zos_ccsid_converter; print(zos_ccsid_converter.__version__)" 2>/dev/null)
+    if [ $? -eq 0 ]; then
+      echo "✓ zos-ccsid-converter package found (version: ${CONVERTER_VERSION})"
+      # Verify it's at least version 0.1.8
+      python3 -c "import zos_ccsid_converter; from packaging import version; assert version.parse(zos_ccsid_converter.__version__) >= version.parse('0.1.8')" 2>/dev/null
+      if [ $? -ne 0 ]; then
+        echo "WARNING: zos-ccsid-converter version ${CONVERTER_VERSION} is older than required 0.1.8" >&2
+        echo "Upgrade with: pip install --upgrade zos-ccsid-converter>=0.1.8" >&2
+      fi
+    else
+      echo "✓ zos-ccsid-converter package found"
+    fi
+  fi
+  
+  # Check batchtsocmd (required: >=0.1.4)
+  python3 -c "import batchtsocmd" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "WARNING: batchtsocmd package not found" >&2
+    echo "Install with: pip install -r ${CBSADIR}/etc/install/base/uss_build/requirements.txt" >&2
+  else
+    # Check batchtsocmd version
+    BATCHTSOCMD_VERSION=$(python3 -c "import batchtsocmd; print(batchtsocmd.__version__)" 2>/dev/null)
+    if [ $? -eq 0 ]; then
+      echo "✓ batchtsocmd package found (version: ${BATCHTSOCMD_VERSION})"
+      # Verify it's at least version 0.1.4
+      python3 -c "import batchtsocmd; from packaging import version; assert version.parse(batchtsocmd.__version__) >= version.parse('0.1.4')" 2>/dev/null
+      if [ $? -ne 0 ]; then
+        echo "WARNING: batchtsocmd version ${BATCHTSOCMD_VERSION} is older than required 0.1.4" >&2
+        echo "Upgrade with: pip install --upgrade batchtsocmd>=0.1.4" >&2
+      fi
+      # Verify CLI interface is available
+      if command -v batchtsocmd &> /dev/null; then
+        batchtsocmd --help 2>&1 | grep -q -- '--source-encoding'
+        if [ $? -ne 0 ]; then
+          echo "WARNING: batchtsocmd version ${BATCHTSOCMD_VERSION} does not support --source-encoding parameter" >&2
+          echo "This feature requires version 0.1.4+. Upgrade with: pip install --upgrade batchtsocmd>=0.1.4" >&2
+        fi
+      else
+        echo "WARNING: batchtsocmd command not found in PATH" >&2
+        echo "Ensure ${HOME}/.local/bin is in your PATH, or install with: pip install --user batchtsocmd>=0.1.4" >&2
+      fi
+    else
+      echo "✓ batchtsocmd package found"
+    fi
+  fi
+  
+  python3 -c "import zoautil_py" 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "WARNING: zoautil_py package not found (typically pre-installed on z/OS)" >&2
+  else
+    echo "✓ zoautil_py package found"
+  fi
+  
+  echo "Environment setup complete"
 fi

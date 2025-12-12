@@ -1,34 +1,53 @@
-# EBCDIC Converter with z/OS fcntl Support
+# z/OS EBCDIC Converter
+
+A Python package for converting files between ASCII (ISO8859-1) and EBCDIC (IBM-1047) encodings on z/OS systems using native fcntl system calls.
 
 ## Overview
 
-This directory contains a new implementation of EBCDIC file conversion utilities that use z/OS-specific `fcntl` system calls for file tagging instead of external commands. This provides better performance, reliability, and direct access to file metadata.
+This package provides a robust, high-performance solution for EBCDIC file conversion on z/OS. It uses z/OS-specific `fcntl` system calls for file tagging instead of external commands, providing better performance, reliability, and direct access to file metadata.
 
-## Files
+## Installation
 
-### 1. `ebcdic_converter_fcntl.py`
-The main conversion module implementing fcntl-based file tagging and conversion.
+### From Source
 
-**Key Features:**
-- Direct fcntl system calls for file tag detection (F_CONTROL_CVT with f_cnvrt structure)
-- Direct fcntl system calls for file tag setting (F_SETTAG with attrib_t structure - may not be supported)
-- Uses Python ctypes.BigEndianStructure for proper z/OS big-endian byte order
-- Support for both regular files and streams/pipes
-- Graceful handling of unconvertible characters
-- Detailed conversion statistics
-- No subprocess overhead
-- Tested and verified on z/OS with 10/10 tests passing
+```bash
+# Clone or download the package
+cd zos_ebcdic_converter
 
-**Main Functions:**
-- `get_file_encoding_fcntl(path, fd=None, verbose=False)` - Detect file encoding using fcntl
-- `set_file_tag_fcntl(path, ccsid, text_flag=True, verbose=False)` - Set file tag using fcntl
+# Install the package
+pip install .
+```
 
-## Service API for Integration
+### For Development
 
-The module can be imported into other Python code as a service:
+```bash
+# Install in editable mode with development dependencies
+pip install -e .
+```
+
+## Usage
+
+### Command Line Interface
+
+After installation, use the `zos-ebcdic-converter` command:
+
+```bash
+# Convert a file to EBCDIC
+zos-ebcdic-converter input.txt output.txt
+
+# Convert with verbose output
+zos-ebcdic-converter -v input.txt output.txt
+
+# Show help
+zos-ebcdic-converter --help
+```
+
+### Python API
+
+Import and use the package in your Python code:
 
 ```python
-from ebcdic_converter_fcntl import CodePageService
+from zos_ebcdic_converter import CodePageService
 
 # Initialize service
 service = CodePageService()
@@ -49,8 +68,46 @@ ascii_bytes = service.convert_to_ascii(ebcdic_bytes)
 stats = service.convert_file('/input.txt', '/output.txt')
 ```
 
+## Features
 
-### CodePageService API Reference
+**Core Capabilities:**
+- Direct fcntl system calls for file tag detection (F_CONTROL_CVT with f_cnvrt structure)
+- Direct fcntl system calls for file tag setting (F_SETTAG with attrib_t structure - may not be supported)
+- Uses Python ctypes.BigEndianStructure for proper z/OS big-endian byte order
+- Support for both regular files and streams/pipes
+- Graceful handling of unconvertible characters
+- Detailed conversion statistics
+- No subprocess overhead
+- Tested and verified on z/OS with 10/10 tests passing
+
+## API Reference
+
+### CodePageService Class
+
+The main service class for code page operations:
+
+```python
+from zos_ebcdic_converter import CodePageService
+
+# Initialize service
+service = CodePageService()
+
+# Detect code page
+ccsid = service.get_ccsid('/path/to/file')
+encoding = service.get_encoding_name('/path/to/file')
+
+# Check file type
+if service.is_ascii('/path/to/file'):
+    print("File is ASCII")
+
+# Convert data
+ebcdic_bytes = service.convert_to_ebcdic(ascii_bytes)
+ascii_bytes = service.convert_to_ascii(ebcdic_bytes)
+
+# Convert files
+stats = service.convert_file('/input.txt', '/output.txt')
+```
+
 
 #### Initialization
 ```python
@@ -104,10 +161,10 @@ service = CodePageService(verbose=False)
       print(f"Converted {stats['bytes_read']} bytes")
   ```
 
-#### Convenience Functions (for direct import)
+### Convenience Functions
 
 ```python
-from ebcdic_converter_fcntl import detect_code_page, detect_encoding, convert_data
+from zos_ebcdic_converter import detect_code_page, detect_encoding, convert_data
 
 # Detect code page without instantiating service
 ccsid = detect_code_page('/tmp/file.txt')
@@ -119,30 +176,66 @@ encoding = detect_encoding('/tmp/file.txt')
 ebcdic = convert_data(b"Hello", 'ISO8859-1', 'IBM-1047')
 ```
 
-### Integration Examples
+## Package Structure
 
-See `example_service_usage.py` for complete working examples including:
-1. Detecting code pages
-2. Checking file types
-3. Converting bytes
-4. Converting files
-5. Auto-detection and conversion
-6. Batch processing multiple files
-7. Integration patterns for existing code
+```
+zos_ebcdic_converter/
+├── setup.py                    # Package configuration
+├── pyproject.toml              # Modern Python packaging metadata
+├── MANIFEST.in                 # File inclusion rules
+├── LICENSE                     # Apache 2.0 license
+├── README.md                   # This file
+├── zos_ebcdic_converter/       # Main package
+│   ├── __init__.py            # Package exports
+│   ├── converter.py           # Core conversion logic
+│   └── cli.py                 # Command-line interface
+├── tests/                      # Test suite
+│   └── test_ebcdic_converter.py
+└── examples/                   # Usage examples
+    └── example_service_usage.py
+```
 
-### 2. `example_service_usage.py`
-Complete working examples demonstrating how to use the CodePageService API.
+## Building and Distribution
 
-**Examples Included:**
-1. Detect code page of a file
-2. Check if file is ASCII or EBCDIC
-3. Convert bytes between encodings
-4. Convert files with auto-detection
-5. Batch process multiple files
-6. Integration patterns for existing code
+### Build the Package
 
-### 3. `test_ebcdic_converter.py`
-Comprehensive test driver for validating the converter functionality.
+```bash
+# Install build tools
+pip install build
+
+# Build distribution packages
+python -m build
+
+# This creates:
+# - dist/zos_ebcdic_converter-1.0.0-py3-none-any.whl
+# - dist/zos_ebcdic_converter-1.0.0.tar.gz
+```
+
+### Install from Built Package
+
+```bash
+# Install from wheel
+pip install dist/zos_ebcdic_converter-1.0.0-py3-none-any.whl
+
+# Or install from source distribution
+pip install dist/zos_ebcdic_converter-1.0.0.tar.gz
+```
+
+## Testing
+
+Run the comprehensive test suite:
+
+```bash
+# From package directory
+cd tests
+python3 test_ebcdic_converter.py
+
+# With verbose output
+python3 test_ebcdic_converter.py --verbose
+
+# Keep test files for inspection
+python3 test_ebcdic_converter.py --keep-files
+```
 
 **Test Coverage:**
 - ISO8859-1 encoded file conversion
@@ -156,41 +249,28 @@ Comprehensive test driver for validating the converter functionality.
 - File tag operations (get/set)
 - Error handling (nonexistent files)
 
-### 4. `batchtsocmd.py` (Original)
-The original implementation using `ls -T` command for encoding detection.
+## Examples
 
-### 5. `README_ebcdic_converter.md`
-This documentation file with complete API reference and usage examples.
+See `examples/example_service_usage.py` for complete working examples:
 
-## Comparison: New vs Original Implementation
+1. Detecting code pages
+2. Checking file types
+3. Converting bytes
+4. Converting files
+5. Auto-detection and conversion
+6. Batch processing multiple files
+7. Integration patterns for existing code
 
-### Original Implementation (`batchtsocmd.py`)
+## Technical Details
 
-**Encoding Detection Method:**
+### z/OS fcntl Implementation
+
+The package uses z/OS-specific fcntl system calls for file tagging:
+
+**Encoding Detection:**
 ```python
-def get_file_encoding(path: str, verbose: bool = False) -> str:
-    # Uses subprocess to run 'ls -T' command
-    result = subprocess.run(['ls', '-T', path], ...)
-    # Parses text output to extract encoding
-```
-
-**Limitations:**
-- Spawns subprocess for each file
-- Parses text output (fragile)
-- Higher overhead
-- Cannot work with file descriptors
-- Depends on external command availability
-
-### New Implementation (`ebcdic_converter_fcntl.py`)
-
-**Encoding Detection Method:**
-```python
-def get_file_encoding_fcntl(path: str, fd: Optional[int] = None,
-                            verbose: bool = False) -> str:
-    # Create f_cnvrt structure with query command
-    qcvt = f_cnvrt(3, 0, 0)  # cvtcmd=3 for query
-    
-    # Direct fcntl system call with ctypes BigEndianStructure
+# Uses F_CONTROL_CVT (13) with f_cnvrt structure
+qcvt = f_cnvrt(3, 0, 0)  # cvtcmd=3 for query
     result = fcntl.fcntl(fd, F_CONTROL_CVT, qcvt)
     cvt_result = f_cnvrt.from_buffer_copy(result)
     
@@ -298,26 +378,23 @@ fcntl.fcntl(fd, F_SETTAG, bytes(tag))
 
 **Status:** ⚠️ May not be supported through Python's fcntl on all z/OS systems
 
-## Usage Examples
+## Requirements
 
-### Basic File Conversion
+- Python 3.6 or higher
+- z/OS operating system
+- Access to z/OS fcntl system calls
 
-```bash
-# Convert ASCII file to EBCDIC
-./ebcdic_converter_fcntl.py input.txt output.txt
+## License
 
-# With verbose output
-./ebcdic_converter_fcntl.py -v input.txt output.txt
-```
+Apache License 2.0 - See LICENSE file for details.
 
-### Get File Encoding Information
+## Contributing
 
-```bash
-# Check file encoding
-./ebcdic_converter_fcntl.py --info myfile.txt
-```
+Contributions are welcome! Please ensure all tests pass before submitting changes.
 
-Output:
+## Support
+
+For issues or questions, please refer to the project documentation or contact the maintainers.
 ```
 File: myfile.txt
   CCSID: 819
