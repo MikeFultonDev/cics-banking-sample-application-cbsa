@@ -216,14 +216,19 @@ class DB2Utilities:
         self.config = config
     
     def execute_sql(self, sql: str, verbose: bool = False) -> bool:
-        """Execute SQL statements via DB2 using ZOAU mvscmd"""
+        """Execute SQL statements via DB2 using ZOAU mvscmd
+        
+        Note: Uses DSNTEP2 for SQL execution (read-only queries).
+        For DDL/DCL statements (CREATE, DROP, GRANT), use DSNTIAD instead.
+        See db2grant/ directory for DSNTIAD usage examples.
+        """
         if verbose:
             print(f"Executing SQL:\n{sql}")
         
         db2_subsystem = self.config.get('DB2_SUBSYSTEM')
         db2_hlq = self.config.get('DB2_HLQ')
         dsntep_plan = self.config.get('DB2_DSNTEP_PLAN', 'DSNTEP2')
-        dsntep_lib = self.config.get('DB2_DSNTEP_LOADLIB', f'{db2_hlq}.RUNLIB.LOAD')
+        dsntep_lib = self.config.get('DB2_SUBSYSTEM_LOADLIB', f'{db2_hlq}.RUNLIB.LOAD')
         
         # Create temporary SQL file
         temp_sql = f"/tmp/sql_{os.getpid()}.sql"

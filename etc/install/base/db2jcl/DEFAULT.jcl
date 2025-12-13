@@ -30,7 +30,7 @@
 //* to the name of the plan that was
 //* used for the DSNTEP2 utility program
 //*
-//* Please change @DB2_DSNTEP_LOADLIB@ to
+//* Please change @DB2_SUBSYSTEM_LOADLIB@ to
 //* to the name of the load library
 //* that contains the DSNTEP2 utility program
 //*
@@ -43,5 +43,5 @@
 // SET BANKPLAN=@BANK_PLAN@
 // SET BANKPKGE=@BANK_PACKAGE@
 // SET DSNTEPP=@DB2_DSNTEP_PLAN@
-// SET DSNTEPL=@DB2_DSNTEP_LOADLIB@
+// SET DSNTEPL=@DB2_SUBSYSTEM_LOADLIB@
 // SET BANKUSER=@BANK_USER@

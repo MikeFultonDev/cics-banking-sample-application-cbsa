@@ -194,7 +194,7 @@ with similar names.
 
 @DB2_DSNTEP_PLAN@ is the name of the plan that the Db2 utility program is bound with. This is installation dependent. You may need to ask your Db2 administrator, or use Db2 to inquire on possible plan names.
 
-@DB2_DSNTEP_LOADLIB@ is the name of the dataset containing the Db2 utility program DSNTEP2. Typically this has "RUNLIB" as part of the name, but this is installation dependent.
+@DB2_SUBSYSTEM_LOADLIB@ is the name of the dataset containing the Db2 utility program DSNTEP2. Typically this has "RUNLIB" as part of the name, but this is installation dependent.
 
 @BANK_USER@ is the name of the user who is going to use Db2 in CICS, which is distinct from the user who is creating the resources. For example, CICSUSER.
 
