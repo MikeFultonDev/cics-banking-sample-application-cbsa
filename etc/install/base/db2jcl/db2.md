@@ -1,6 +1,7 @@
 # Db2 Assets Required by CICS Banking Sample Application
 
-This document describes the Db2 assets needed by the CICS Banking Sample Application (CBSA) based on the JCL files in this directory.
+This document describes the Db2 assets needed by the CICS Banking Sample
+Application (CBSA) based on the JCL files in this directory.
 
 ## Database
 
@@ -40,6 +41,7 @@ Three tablespaces are required within the CBSA database:
 Located in tablespace `CBSA.ACCOUNT`
 
 **Columns:**
+
 - `ACCOUNT_EYECATCHER` - CHAR(4)
 - `ACCOUNT_CUSTOMER_NUMBER` - CHAR(10)
 - `ACCOUNT_SORTCODE` - CHAR(6) NOT NULL
@@ -54,6 +56,7 @@ Located in tablespace `CBSA.ACCOUNT`
 - `ACCOUNT_ACTUAL_BALANCE` - DECIMAL(12, 2)
 
 **Properties:**
+
 - NOT VOLATILE
 - CARDINALITY
 - AUDIT NONE
@@ -64,6 +67,7 @@ Located in tablespace `CBSA.ACCOUNT`
 Located in tablespace `CBSA.PROCTRAN`
 
 **Columns:**
+
 - `PROCTRAN_EYECATCHER` - CHAR(4)
 - `PROCTRAN_SORTCODE` - CHAR(6) NOT NULL
 - `PROCTRAN_NUMBER` - CHAR(8) NOT NULL
@@ -75,6 +79,7 @@ Located in tablespace `CBSA.PROCTRAN`
 - `PROCTRAN_AMOUNT` - DECIMAL(12, 2)
 
 **Properties:**
+
 - NOT VOLATILE
 - CARDINALITY
 - AUDIT NONE
@@ -85,11 +90,13 @@ Located in tablespace `CBSA.PROCTRAN`
 Located in tablespace `CBSA.CONTROL`
 
 **Columns:**
+
 - `CONTROL_NAME` - CHAR(32)
 - `CONTROL_VALUE_NUM` - INTEGER
 - `CONTROL_VALUE_STR` - CHAR(40)
 
 **Properties:**
+
 - NOT VOLATILE
 - CARDINALITY
 - AUDIT NONE
@@ -133,6 +140,7 @@ The application requires the following Db2 packages to be bound:
 10. **XFRFUN** - Transfer Function
 
 All packages are bound with:
+
 - **Owner:** Specified by `&DB2OWNER` variable
 - **Qualifier:** Specified by `&DB2OWNER` variable
 - **Action:** REPLACE
@@ -142,6 +150,7 @@ All packages are bound with:
 **Plan Name:** Specified by `&BANKPLAN` variable
 
 **Configuration:**
+
 - **Owner:** Specified by `&DB2OWNER` variable
 - **Isolation Level:** UR (Uncommitted Read)
 - **Package List:** NULLID.*, &BANKPKGE..*
@@ -151,10 +160,13 @@ All packages are bound with:
 The application requires the following grants:
 
 ### Plan Execution
+
 - `GRANT EXECUTE ON PLAN &BANKPLAN TO &BANKUSER`
 
 ### Table Permissions
-- `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE &DB2OWNER..ACCOUNT TO &BANKUSER`
+
+- `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE &DB2OWNER..ACCOUNT TO
+  &BANKUSER`
 - `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE &DB2OWNER..PROCTRAN TO &BANKUSER`
 - `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE &DB2OWNER..CONTROL TO &BANKUSER`
 
@@ -183,14 +195,18 @@ Based on the JCL files, the recommended installation order is:
 5. Create Indexes (CREI101.jcl, CREI201.jcl, CREI301.jcl)
 6. Bind Packages and Plan (DB2BIND.jcl)
 
-Alternatively, use **INSTDB2.jcl** which performs all creation steps in a single job.
+Alternatively, use **INSTDB2.jcl** which performs all creation steps in a
+single job.
 
 ## Cleanup
 
-To remove all Db2 assets, use **DROPDB2.jcl** which drops all objects in reverse order.
+To remove all Db2 assets, use **DROPDB2.jcl** which drops all objects in
+reverse order.
 
 ## Notes
 
-- The VCAT name (DSNV12DP) should be changed to match your installation's integrated catalog facility catalog
+- The VCAT name (DSNV12DP) should be changed to match your installation's
+  integrated catalog facility catalog
 - All JCL files use symbolic parameters that must be customized for your environment
-- The BTCHSQL.jcl file is provided for testing SQL queries against the database
+- The BTCHSQL.jcl file is provided for testing SQL queries against the
+  database

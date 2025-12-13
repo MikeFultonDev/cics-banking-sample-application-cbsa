@@ -1,6 +1,6 @@
-# CBSA RESTful API Guide
+# CBSA RESTful API Guide.
 
-## Introduction
+## Introduction:
 
 There are two interfaces supplied which can drive the RESTful API for
 CBSA. The Payment interface and the Customer Service interface. These
@@ -15,7 +15,7 @@ Please refer to the GitHub repo:
 cicsdev/cics-banking-sample-application-cbsa/doc for architecture
 information.
 
-## The PAYMENT interface
+## The PAYMENT interface:
 
 Think of the Payment interface as being similar to a debit or credit
 card machine that you'd find in a business. Instead of swiping a card,
@@ -26,14 +26,14 @@ the GitHub repo:
 
 cicsdev/cics-banking-sample-application-cbsa/etc/usage/sprintBoot/doc.
 
-### The associated RESTful Payment details
+### The associated RESTful Payment details:
 
 The Payment interface utilises a z/OS Connect RESTful API, which
 requires the use of a zOS Connect server. The RESTful API can also be
 driven independently of the Payment interface. It can, therefore, be
 integrated into other applications if desired.
 
-#### The Payment Service (Pay) details are
+#### The Payment Service (Pay) details are:
 
 > \"ServiceName\": \"Pay\",
 >
@@ -45,7 +45,7 @@ integrated into other applications if desired.
 >
 > /zosConnect/services/Pay\"
 
-#### The Payment Service API
+#### The Payment Service API:
 
 > There is one API available for the Payment Service, called
 > ***makepayment***. The details are as follows:
@@ -61,7 +61,7 @@ integrated into other applications if desired.
 >
 >        
 
-#### The URL to drive RESTful Payments
+#### The URL to drive RESTful Payments:
 
 > http://your-host-name:your-port-number/makepayment/dbcr
 >
@@ -70,7 +70,7 @@ integrated into other applications if desired.
 > to be taken from), the company taking the payment and the payment
 > amount).
 
-#### A valid JSON request body example
+#### A valid JSON request body example:
 
 > {
 >
@@ -120,7 +120,7 @@ integrated into other applications if desired.
 > traffic). The company name may be up to 16 bytes in length and can be
 > spread across COMM_APPLID and COMM_USERID (as shown above).
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"PAYDBCR\": {
 >
@@ -164,7 +164,7 @@ integrated into other applications if desired.
 > attributes not be required, it is simple enough to change the mappings
 > in zOS Connect.
 
-#### Examples of the JSON response body returned if the payment/credit cannot be made
+#### Examples of the JSON response body returned if the payment/credit cannot be made:
 
 > There are occasions when a payment/credit may not be successful, for
 > example:
@@ -340,18 +340,18 @@ integrated into other applications if desired.
 > available in the account and the requested payment is therefore not
 > granted.
 
-#### Other information
+#### Other information:
 
 > The same interface can also be used by EXAMPLE LTD to issue a credit
 > back to a customer. To credit an amount simply drop the minus sign
 > from the COMM_AMT.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **DBCRFUN** is being driven by this API call utilising
 > copybook **PAYDBCR**.
 
-#### Note of caution
+#### Note of caution:
 
 > The old saying "garbage in / garbage out" applies. The RESTful Payment
 > API should be used in accordance with the instructions as detailed
@@ -361,7 +361,7 @@ integrated into other applications if desired.
 > the supplied Payment Interface. Scenarios outside of this, may need to
 > perform additional validation checks to avoid data corruption.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -735,7 +735,7 @@ integrated into other applications if desired.
 >
 > }
 
-## The CUSTOMER SERVICE Interface
+## The CUSTOMER SERVICE Interface:
 
 The Customer Service interface will be used in bank branches, by staff,
 who can traverse the line of queuing customers, to deal with most
@@ -755,7 +755,7 @@ GitHub repo:
 
 cicsdev/cics-banking-sample-application-cbsa/etc/usage/sprintBoot/doc.
 
-### The associated RESTful Customer Service details
+### The associated RESTful Customer Service details:
 
 The Customer Service Interface utilises a range of new z/OS Connect
 RESTful APIs. These RESTful APIs can also be driven independently of the
@@ -776,7 +776,7 @@ applications if desired.
 
                  
 
-#### The Customer Service Customer Enquiry API
+#### The Customer Service Customer Enquiry API:
 
 > There is one API available for the Customer Enquiry, and that is the
 > ***inqcustz*** API. The details are as follows:
@@ -793,14 +793,14 @@ applications if desired.
 
                  
 
-#### The URL to drive RESTful Customer Enquiry
+#### The URL to drive RESTful Customer Enquiry:
 
 > [http://your-host-name:your-port-number/inqcustz/enquiry/10](http://your-host-name:your-port-number/inqcustz/enquiry/10)
 >
 > This URL enquires on customer 10 and issues an HTTP GET. No JSON
 > request body is needed for this enquiry.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > Here is the response from the above request:
 >
@@ -854,7 +854,7 @@ applications if desired.
 > attributes not be required, it is simple enough to change the mappings
 > in zOS Connect.
 
-#### Examples of the JSON response body returned if the customer enquiry cannot be made
+#### Examples of the JSON response body returned if the customer enquiry cannot be made:
 
 > There are occasions when a customer enquiry might not be successful,
 > for example:
@@ -1011,7 +1011,7 @@ applications if desired.
 > encountered with VSAM, in the backend program, and the request cannot
 > be fulfilled).
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **INQCUST** is being driven by this API call utilising
 > copybook **INQCUSTZ**. Note the copybook INQCUSTZ and INQCUST are
@@ -1019,7 +1019,7 @@ applications if desired.
 > into PIC X(4), this is to allowed zOS Connect to utilise the
 > copybook correctly.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -1463,7 +1463,7 @@ applications if desired.
 >
 > /zosConnect/services/CScustupd\"
 
-#### The Customer Service Customer Update API
+#### The Customer Service Customer Update API:
 
 > There is one API available for the Customer Update, and that is the
 > ***updcust*** API. The details are as follows:
@@ -1480,7 +1480,7 @@ applications if desired.
 
                  
 
-#### The URL to drive RESTful Customer Update
+#### The URL to drive RESTful Customer Update:
 
 > [http://your-host-name:your-host-number/updcust/update](http://your-host-name:your-host-number/updcust/update)
 >
@@ -1489,7 +1489,7 @@ applications if desired.
 > amended Name, the amended Address or both) and a JSON response body is
 > returned.
 
-#### An example JSON request body
+#### An example JSON request body:
 
 > {
 >
@@ -1519,7 +1519,7 @@ applications if desired.
 >
 > }
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"UPDCUST\": {
 >
@@ -1553,7 +1553,7 @@ applications if desired.
 > attributes not be required, it is simple enough to change the mappings
 > in zOS Connect.
 
-#### Examples of the JSON response body returned if the customer update cannot be made
+#### Examples of the JSON response body returned if the customer update cannot be made:
 
 > Occasions when a customer update might not be successful include:
 
@@ -1716,17 +1716,17 @@ applications if desired.
 > to spaces is enforced, to stop inadvertent update/corruption of the
 > customer data.
 
-#### Other information
+#### Other information:
 
 > It is perfectly permissible to just update the name (and not supply
 > the address) or to just update the address and not supply the name.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **UPDCUST** is being driven by this API, the call
 > utilises copybook **UPDCUST**.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -2012,7 +2012,7 @@ applications if desired.
 >
 > /zosConnect/services/CScustacc\"
 
-#### The Customer Service List All Customer's Accounts API
+#### The Customer Service List All Customer's Accounts API:
 
 > There is one API available for listing all of the customer's accounts,
 > and that is the ***inqacccz*** API. The details are as follows:
@@ -2026,14 +2026,14 @@ applications if desired.
 > \"adminUrl\":
 > [http://your-host-name:your-port-number/zosConnect/apis/inqaccz](http://your-host-name:your-port-number/zosConnect/apis/inqaccz)
 
-#### The URL to drive RESTful List All Customer's Accounts Enquiry
+#### The URL to drive RESTful List All Customer's Accounts Enquiry:
 
 > http://your-host-name:your-port-number/inqacccz/list/1
 >
 > This URL performs a list all customer's accounts and issues an HTTP
 > PUT. No JSON request body is needed for this enquiry.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > Here is the response when the URL above is used:
 >
@@ -2205,7 +2205,7 @@ applications if desired.
 > of data which may be flowed. Should some attributes not be required,
 > it is simple enough to change the mappings in zOS Connect.
 
-#### Examples of the JSON response body returned if the list accounts enquiry cannot be made
+#### Examples of the JSON response body returned if the list accounts enquiry cannot be made:
 
 > Occasions when listing a customer's accounts might not be successful
 > include:
@@ -2275,7 +2275,7 @@ applications if desired.
 > opened. '3' = An issue was encountered fetching the account data. '4'
 > = An issue on the cursor close).
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **INQACCCU** is being driven by this API, which
 > utilises copybook **INQACCCZ**. The copybook INQACCCZ and INQACCCU are
@@ -2283,7 +2283,7 @@ applications if desired.
 > into PIC X(4), this allows zOS Connect to utilise the copybook
 > correctly.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -2775,7 +2775,7 @@ applications if desired.
 >
 > /zosConnect/services/CScustcre\"
 
-#### The Customer Service Customer Creation API
+#### The Customer Service Customer Creation API:
 
 > There is one API available for the Customer Create, and that is the
 > ***crecust*** API. The details are as follows:
@@ -2793,7 +2793,7 @@ applications if desired.
 
                  
 
-#### The URL to drive RESTful Customer Creation
+#### The URL to drive RESTful Customer Creation:
 
 > [http://your-host-name:your-port-number/crecust/insert](http://your-host-name:your-port-number/crecust/insert)
 >
@@ -2801,7 +2801,7 @@ applications if desired.
 > requires a JSON request body to be provided (containing the Name,
 > Address and Date of Birth) and a JSON response body is returned.
 
-#### An example JSON request body
+#### An example JSON request body:
 
 > {
 >
@@ -2835,7 +2835,7 @@ applications if desired.
 >
 > }
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > Here is the response from the above request:
 >
@@ -2876,7 +2876,7 @@ applications if desired.
 > Should some attributes not be required, it is simple enough to change
 > the mappings in zOS Connect.
 
-#### Examples of the JSON response body returned if the customer creation cannot be made
+#### Examples of the JSON response body returned if the customer creation cannot be made:
 
 > Occasions when a customer creation might not be successful, include:
 
@@ -3127,17 +3127,17 @@ applications if desired.
 > COMM_FAIL_CODE attribute being set to 'O' ('O' =The supplied Date Of
 > Birth is invalid). In this case, the request cannot be fulfilled.
 
-#### Other information
+#### Other information:
 
 > The Name, Address and Date of Birth attributes should all contain
 > valid data to drive this API correctly.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **CRECUST** is being driven by this API, this utilises
 > copybook **CRECUST**.
 
-#### Note of caution
+#### Note of caution:
 
 > The old saying "garbage in / garbage out" applies. The RESTful Create
 > Customer API should be used in accordance with the instructions as
@@ -3148,7 +3148,7 @@ applications if desired.
 > Scenarios outside of this, may need to perform additional validation
 > checks to avoid data corruption.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -3461,7 +3461,7 @@ applications if desired.
 >
 > /zosConnect/services/CScustdel\"
 
-#### The Customer Service Delete Customer API
+#### The Customer Service Delete Customer API:
 
 > There is one API available for deleting customers, and that is the
 > ***delcus*** API. The details are as follows:
@@ -3481,14 +3481,14 @@ applications if desired.
 >
 >           
 
-### The URL to drive RESTful Delete Customer
+### The URL to drive RESTful Delete Customer:
 
 > [http://your-host-name:your-port-number/delcus/remove/0000001471](http://your-host-name:your-port-number/delcus/remove/0000001471)
 >
 > This URL performs a customer deletion via an HTTP DELETE. No JSON
 > request body is needed for this instruction.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > Here is the response from the above request:
 >
@@ -3524,7 +3524,7 @@ applications if desired.
 > which may be flowed. Should some attributes not be required, it is
 > simple enough to change the mappings in zOS Connect.
 
-#### Examples of the JSON response body returned if the delete request cannot be made
+#### Examples of the JSON response body returned if the delete request cannot be made:
 
 > Occasions when deleting a customer might not be successful, include:
 
@@ -3559,12 +3559,12 @@ applications if desired.
 > The failure is denoted by the COMM_DEL_SUCCESS being set to 'N' and
 > the COMM_DEL_FAIL_CD set to '1'.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **DELCUS** is being driven by this API, the call
 > utilises copybook **DELCUS**
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -3875,7 +3875,7 @@ applications if desired.
 >
 > /zosConnect/services/CSaccenq\"
 
-#### The Customer Service Account Enquiry API
+#### The Customer Service Account Enquiry API:
 
 > There is one API available for the Account Enquiry, and that is the
 > ***inqaccz*** API. The details are as follows:
@@ -3894,14 +3894,14 @@ applications if desired.
 
 ####
 
-#### The URL to drive Account Enquiry
+#### The URL to drive Account Enquiry:
 
 > [http://your-host-name:your-port-number/inqaccz/enquiry/51](http://your-host-name:your-port-number/inqaccz/enquiry/51)
 >
 > This URL enquires on account 51 and issues an HTTP GET. No JSON
 > request body is needed for this enquiry.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"INQACC_COMMAREA\": {
 >
@@ -3943,7 +3943,7 @@ applications if desired.
 > attributes not be required, it is simple enough to change the mappings
 > in zOS Connect.
 
-#### Examples of the JSON response body returned if the account enquiry cannot be made
+#### Examples of the JSON response body returned if the account enquiry cannot be made:
 
 > Occasions when an account enquiry might not be successful, include:
 
@@ -3985,14 +3985,14 @@ applications if desired.
 >
 > The failure is denoted by the INQACC_SUCCESS being set to 'N'.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **INQACC** is being driven by this API call utilising
 > copybook **INQACCZ**. The copybook INQACCZ and INQACC are identical
 > except that in INQACCZ any POINTERs have been converted into PIC X(4),
 > this allows zOS Connect to utilise the copybook correctly.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -4399,7 +4399,7 @@ applications if desired.
 >
 > /zosConnect/services/CSaccupd\"
 
-#### The Customer Service Account Update API
+#### The Customer Service Account Update API:
 
 > There is one API available for the Account Update, and that is the
 > *updacc* API. The details are as follows:
@@ -4415,7 +4415,7 @@ applications if desired.
 >
 > /zosConnect/apis/updacc\"    
 
-#### The URL to drive RESTful Account Update
+#### The URL to drive RESTful Account Update:
 
 > [http://your-host-name:your-port-number/updacc/update](http://your-host-name:your-port-number/updacc/update)
 >
@@ -4424,7 +4424,7 @@ applications if desired.
 > number, account type, interest rate, and overdraft limit) and a JSON
 > response body is returned.
 
-#### An example JSON request body
+#### An example JSON request body:
 
 > **{**
 >
@@ -4463,7 +4463,7 @@ applications if desired.
 > This request turns account 43 into a LOAN account, with an interest
 > rate of 66.91%, and a 1000 overdraft limit.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"UPDACC\": {
 >
@@ -4503,7 +4503,7 @@ applications if desired.
 > attributes not be required, it is simple enough to change the mappings
 > in zOS Connect.
 
-#### Examples of the JSON response body returned if the account update cannot be made
+#### Examples of the JSON response body returned if the account update cannot be made:
 
 > Occasions when an account update might not be successful:
 
@@ -4616,18 +4616,18 @@ applications if desired.
 
 ####
 
-#### Other information
+#### Other information:
 
 > The account number, an account type, the interest rate and the
 > overdraft limit must always be supplied when undertaking an update
 > account.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **UPDACC** is being driven by this API, this utilises
 > copybook **UPDACC**.
 
-#### Note of caution
+#### Note of caution:
 
 > The old "saying garbage in / garbage out" applies. The RESTful Account
 > Update API should be used in accordance with the instructions as
@@ -4638,7 +4638,7 @@ applications if desired.
 > Scenarios outside of this, may need to perform additional validation
 > checks to avoid data corruption.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -5004,7 +5004,7 @@ applications if desired.
 >
 > /zosConnect/services/CSacccre\"
 
-#### The Customer Service Account Creation API
+#### The Customer Service Account Creation API:
 
 > There is one API available for the Account Create, and that is the
 > ***creacc*** API. The details are as follows:
@@ -5019,7 +5019,7 @@ applications if desired.
 >
 > /zosConnect/apis/creacc\"
 
-#### The URL to drive RESTful Account Creation
+#### The URL to drive RESTful Account Creation:
 
 > [http://your-host-name:your-port-number/creacc/insert](http://your-host-name:your-port-number/creacc/insert)
 >
@@ -5028,7 +5028,7 @@ applications if desired.
 > number, the account type, the interest rate, and the overdraft limit)
 > and a JSON response body is returned.
 
-#### An example JSON request body
+#### An example JSON request body:
 
 > {
 >
@@ -5070,7 +5070,7 @@ applications if desired.
 >
 > }
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"CREACC\": {
 >
@@ -5116,7 +5116,7 @@ applications if desired.
 > Should some attributes not be required, it is simple enough to change
 > the mappings in zOS Connect.
 
-#### Examples of the JSON response body returned if the account creation cannot be made
+#### Examples of the JSON response body returned if the account creation cannot be made:
 
 > Occasions when an account creation might not be successful, include:
 
@@ -5292,17 +5292,17 @@ applications if desired.
 > issue. '5' A dequeue issue. '7' = An issue with the INSERT). In any of
 > these instances the request cannot be fulfilled.
 
-#### Other information
+#### Other information:
 
 > The customer number, account type, interest rate, and the overdraft
 > limit attributes must all be provided to drive this API correctly.
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **CREACC** is being driven by this API, this utilises
 > copybook **CREACC**.
 
-#### Note of caution
+#### Note of caution:
 
 > The old saying "garbage in / garbage out" applies. The RESTful Create
 > Account API should be used in accordance with the instructions as
@@ -5313,7 +5313,7 @@ applications if desired.
 > Scenarios outside of this, may need to perform additional validation
 > checks to avoid data corruption.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -5738,7 +5738,7 @@ applications if desired.
 >
 > /zosConnect/services/CSaccdel\"
 
-#### The Customer Service Delete Account API
+#### The Customer Service Delete Account API:
 
 > There is one API available for deleting accounts, and that is the
 > ***delacc*** API. The details are as follows:
@@ -5753,14 +5753,14 @@ applications if desired.
 >
 > /zosConnect/apis/delacc\"
 
-#### The URL to drive RESTful Account deletion
+#### The URL to drive RESTful Account deletion:
 
 > http://your-host-name:your-port-number/delacc/remove/559
 >
 > This URL performs an account delete and issues an HTTP DELETE. No JSON
 > request body is needed for this.
 
-#### The JSON response body returned
+#### The JSON response body returned:
 
 > {\"DELACC_COMMAREA\": {
 >
@@ -5814,7 +5814,7 @@ applications if desired.
 > which may be flowed. Should some attributes not be required, it is
 > simple enough to change the mappings in zOS Connect.
 
-#### Examples of the JSON response body returned if the delete account request cannot be made
+#### Examples of the JSON response body returned if the delete account request cannot be made:
 
 > Occasions when an account deletion might not be successful, include:
 
@@ -5920,7 +5920,7 @@ applications if desired.
 > The failure is denoted by the DELACC_DEL_SUCCESS = 'N' and the
 > DELACC_DEL_FAIL_CD = '3' ('3' = Unable to delete).
 
-#### What is being driven at the backend by this API?
+#### What is being driven at the backend by this API?:
 
 > Backend program **DELACC** is being driven by this API, the call
 > utilises copybook **DELACCZ**. Note the copybook DELACCZ and DELACC
@@ -5928,7 +5928,7 @@ applications if desired.
 > into PIC X(4), allowing zOS Connect to utilise the copybook
 > correctly.
 
-#### Swagger details
+#### Swagger details:
 
 > {
 >
@@ -6407,4 +6407,3 @@ applications if desired.
 > }
 >
 > }
-

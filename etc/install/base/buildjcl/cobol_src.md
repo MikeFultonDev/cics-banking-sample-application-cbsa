@@ -1,6 +1,7 @@
 # COBOL Source Files for CICS Banking Sample Application
 
-This document lists all COBOL source files that need to be compiled to build the application, based on the JCL files in the buildjcl directory.
+This document lists all COBOL source files that need to be compiled to
+build the application, based on the JCL files in the buildjcl directory.
 
 ## CICS COBOL Programs
 

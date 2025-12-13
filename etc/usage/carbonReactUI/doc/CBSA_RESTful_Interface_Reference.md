@@ -1,7 +1,7 @@
 # CICS Banking Sample Application (CBSA) RESTful Interface Reference
 
 
-## Accessing the RESTful Interface:
+## Accessing the RESTful Interface
 
 Behind the Carbon React UI is a RESTful interface which is accessed via HTTP requests. GET requests are easily performed through a web browser. PUT, POST and DELETE requests will require a HTTP client or plug-in.
 
