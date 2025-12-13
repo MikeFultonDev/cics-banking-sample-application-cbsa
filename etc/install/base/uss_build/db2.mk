@@ -16,21 +16,21 @@ DB2SQL_DIR := $(mkfile_dir)/db2sql
 DB2_HLQ ?= DB2V13
 DB2_SUBSYSTEM ?= DBD1
 DSN_HLQ ?= $(DB2_SUBSYSTEM)
-DB2_OWNER ?= IBMUSER
-DB2_DB ?= CBSAMF1
-DB2_PLAN ?= CBSAMF1
-DB2_PACKAGE ?= PCBSAMF1
+DB2_OWNER ?= $(USER)
+DB2_DB ?= CBSAMF2
+DB2_PLAN ?= CBSAMF2
+DB2_PACKAGE ?= PCBSAMF2
 DB2_DSNTEP_PLAN ?= DSNTEP13
 DB2_DSNTEP_LOADLIB ?= $(DSN_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DBD1
 BANK_USER ?= CICSUSER
 
-# batchtsocmd command (from PyPI package batchtsocmd>=0.1.4)
+# batchtsocmd command (from PyPI package batchtsocmd>=0.1.7)
 # Uses the CLI interface: batchtsocmd --systsin <file> --sysin <file> [options]
 BATCHTSOCMD := batchtsocmd
 
 # Helper function to substitute SQL variables using envsubst and execute db2cmd with temporary files
-# Note: batchtsocmd handles ASCII to EBCDIC conversion internally via --source-encoding parameter
+# Note: batchtsocmd handles ASCII to EBCDIC conversion automatically when reading from files
 # Captures output and prints to stderr on failure, returning the error code
 define run_db2cmd
 	@echo "Running $(1)..."
@@ -50,13 +50,15 @@ define run_db2cmd
 	envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_FILE; \
 	envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_FILE; \
 	set +e; \
-	OUTPUT=$$($(BATCHTSOCMD) --systsin $$SYSTSIN_FILE --sysin $$SYSIN_FILE --steplib $(DB2_HLQ).SDSNLOAD --source-encoding ISO8859-1 2>&1); \
+	OUTPUT=$$($(BATCHTSOCMD) --systsin $$SYSTSIN_FILE --sysin $$SYSIN_FILE --steplib $(DB2_HLQ).SDSNLOAD 2>&1); \
 	RC=$$?; \
 	set -e; \
-	rm -f $$SYSTSIN_FILE $$SYSIN_FILE; \
 	if [ $$RC -gt 0 ]; then \
+		echo "Command: $(BATCHTSOCMD) --systsin $$SYSTSIN_FILE --sysin $$SYSIN_FILE --steplib $(DB2_HLQ).SDSNLOAD failed"; \
 		echo "$$OUTPUT" >&2; \
 		exit $$RC; \
+	else \
+		rm -f $$SYSTSIN_FILE $$SYSIN_FILE; \
 	fi
 endef
 
