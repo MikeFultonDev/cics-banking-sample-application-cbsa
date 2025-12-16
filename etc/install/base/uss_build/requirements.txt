@@ -1,16 +1,11 @@
 # Python dependencies for CBSA USS build scripts
 # Install with: pip install -r requirements.txt
 
-# z/OS CCSID Converter - for EBCDIC/ASCII conversion
-# Published package from PyPI: https://pypi.org/project/zos-ccsid-converter/
-# Note: This is a dependency of batchtsocmd and must be installed first
-zos-ccsid-converter>=0.1.8
-
 # Batch TSO Command - for executing TSO commands in batch mode
 # Published package from PyPI: https://pypi.org/project/batchtsocmd/
 # Depends on: zos-ccsid-converter
-# Note: Version 0.1.7+ required for proper CLI interface
-batchtsocmd>=0.1.7
+# Note: Version 0.1.9+ required for proper CLI interface
+batchtsocmd>=0.1.9
 
 # IBM Z Open Automation Utilities
 # Note: zoautil_py is typically pre-installed on z/OS systems

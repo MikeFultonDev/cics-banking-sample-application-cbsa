@@ -45,48 +45,13 @@ else
   # Check if required Python packages are installed
   echo "Checking Python dependencies..."
   
-  # Check zos-ccsid-converter (required: >=0.1.8)
-  python3 -c "import zos_ccsid_converter" 2>/dev/null
-  if [ $? -ne 0 ]; then
-    echo "WARNING: zos-ccsid-converter package not found" >&2
-    echo "Installing zos-ccsid-converter>=0.1.8..." >&2
-    pip install --upgrade "zos-ccsid-converter>=0.1.8"
-    if [ $? -eq 0 ]; then
-      echo "✓ zos-ccsid-converter successfully installed" >&2
-    else
-      echo "ERROR: Failed to install zos-ccsid-converter" >&2
-      echo "Try manually: pip install -r ${CBSADIR}/etc/install/base/uss_build/requirements.txt" >&2
-    fi
-  else
-    # Check zos-ccsid-converter version
-    CONVERTER_VERSION=$(python3 -c "import zos_ccsid_converter; print(zos_ccsid_converter.__version__)" 2>/dev/null)
-    if [ $? -eq 0 ]; then
-      # Verify it's at least version 0.1.8
-      python3 -c "import zos_ccsid_converter; from packaging import version; assert version.parse(zos_ccsid_converter.__version__) >= version.parse('0.1.8')" 2>/dev/null
-      if [ $? -ne 0 ]; then
-        echo "WARNING: zos-ccsid-converter version ${CONVERTER_VERSION} is older than required 0.1.8" >&2
-        echo "Upgrading to zos-ccsid-converter>=0.1.8..." >&2
-        pip install --upgrade "zos-ccsid-converter>=0.1.8"
-        if [ $? -eq 0 ]; then
-          CONVERTER_VERSION=$(python3 -c "import zos_ccsid_converter; print(zos_ccsid_converter.__version__)" 2>/dev/null)
-          echo "✓ zos-ccsid-converter upgraded to version ${CONVERTER_VERSION}" >&2
-        else
-          echo "ERROR: Failed to upgrade zos-ccsid-converter" >&2
-        fi
-      else
-        echo "✓ zos-ccsid-converter package found (version: ${CONVERTER_VERSION})"
-      fi
-    else
-      echo "✓ zos-ccsid-converter package found"
-    fi
-  fi
-  
-  # Check batchtsocmd (required: >=0.1.7)
+  # Check batchtsocmd (required: >=0.1.9)
+  # Note: batchtsocmd will automatically install zos-ccsid-converter as a dependency
   python3 -c "import batchtsocmd" 2>/dev/null
   if [ $? -ne 0 ]; then
     echo "WARNING: batchtsocmd package not found" >&2
-    echo "Installing batchtsocmd>=0.1.7..." >&2
-    pip install --upgrade "batchtsocmd>=0.1.7"
+    echo "Installing batchtsocmd>=0.1.9..." >&2
+    pip install --upgrade "batchtsocmd>=0.1.9"
     if [ $? -eq 0 ]; then
       echo "✓ batchtsocmd successfully installed" >&2
     else
@@ -97,12 +62,12 @@ else
     # Check batchtsocmd version
     BATCHTSOCMD_VERSION=$(python3 -c "import batchtsocmd; print(batchtsocmd.__version__)" 2>/dev/null)
     if [ $? -eq 0 ]; then
-      # Verify it's at least version 0.1.7
-      python3 -c "import batchtsocmd; from packaging import version; assert version.parse(batchtsocmd.__version__) >= version.parse('0.1.7')" 2>/dev/null
+      # Verify it's at least version 0.1.9
+      python3 -c "import batchtsocmd; from packaging import version; assert version.parse(batchtsocmd.__version__) >= version.parse('0.1.9')" 2>/dev/null
       if [ $? -ne 0 ]; then
-        echo "WARNING: batchtsocmd version ${BATCHTSOCMD_VERSION} is older than required 0.1.7" >&2
-        echo "Upgrading to batchtsocmd>=0.1.7..." >&2
-        pip install --upgrade "batchtsocmd>=0.1.7"
+        echo "WARNING: batchtsocmd version ${BATCHTSOCMD_VERSION} is older than required 0.1.9" >&2
+        echo "Upgrading to batchtsocmd>=0.1.9..." >&2
+        pip install --upgrade "batchtsocmd>=0.1.9"
         if [ $? -eq 0 ]; then
           BATCHTSOCMD_VERSION=$(python3 -c "import batchtsocmd; print(batchtsocmd.__version__)" 2>/dev/null)
           echo "✓ batchtsocmd upgraded to version ${BATCHTSOCMD_VERSION}" >&2

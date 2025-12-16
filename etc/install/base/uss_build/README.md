@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 This will install:
 - `batchtsocmd` - For executing TSO commands in batch mode (published package from PyPI)
-- `zos-ccsid-converter` - For EBCDIC/ASCII file conversion (published package from PyPI)
+  - Note: `batchtsocmd` automatically installs `zos-ccsid-converter` as a dependency for EBCDIC/ASCII conversion
 - Other dependencies as needed
 
 **Note**: The `zoautil_py` package is typically pre-installed on z/OS systems. If not available, contact your system administrator.
@@ -47,20 +47,23 @@ This will install:
 ```
 uss_build/
 ├── README.md                    # This file
+├── requirements.txt             # Python package dependencies
 ├── build.conf                   # Configuration file
 ├── Makefile                     # Main build orchestration
 ├── compile.mk                   # COBOL compilation Makefile
-├── bind.mk                      # DB2 binding Makefile
+├── assemble.mk                  # BMS map assembly Makefile
+├── db2.mk                       # DB2 management Makefile
 ├── cbsa_utils.py               # Common utility functions
-├── 01_create_libraries.py      # Create MVS libraries
-├── 02_setup_db2.py             # Setup DB2 artifacts
 ├── 05_populate_data.py         # Create VSAM files and populate data
+├── bin/                         # Utility scripts and converters
+├── db2grant/                    # DB2 grant scripts
+├── db2sql/                      # DB2 SQL scripts
+├── zos_ebcdic_converter/       # Local EBCDIC converter (legacy)
 └── build/                       # Build output directory (created automatically)
     ├── obj/                     # Object files (.o)
     ├── load/                    # Load modules (executables)
     ├── dbrm/                    # DB2 Database Request Modules
-    ├── dsect/                   # BMS DSECT copybooks
-    └── bind/                    # DB2 bind tracking and SQL scripts
+    └── bmsmacro/                # BMS copybook macros
 ```
 
 **Note**: The build system uses native Makefiles for compilation and binding:
@@ -83,7 +86,7 @@ source ${CBSADIR}/setenv
 
 The `setenv` script will:
 - Configure the Python environment and PYTHONPATH
-- Check for required Python packages (batchtsocmd, zos-ccsid-converter, zoautil_py)
+- Check for required Python packages (batchtsocmd, zoautil_py)
 - Display warnings if any dependencies are missing
 - Load host-specific configuration if available
 

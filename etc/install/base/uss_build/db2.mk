@@ -28,7 +28,7 @@ CBSA_ACCOUNT_STOGROUP ?= CBSABASG
 CBSA_CONTROL_STOGROUP ?= CBSACTSG
 CBSA_PROCTRAN_STOGROUP ?= CBSAPTSG
 
-# batchtsocmd command (from PyPI package batchtsocmd>=0.1.7)
+# batchtsocmd command (from PyPI package batchtsocmd>=0.1.9)
 # Uses the CLI interface: batchtsocmd --systsin <file> --sysin <file> [options]
 BATCHTSOCMD := batchtsocmd
 
