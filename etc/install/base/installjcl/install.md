@@ -178,7 +178,7 @@ Creates and populates VSAM files for the banking application:
   - Final Customer Number: 10000
   - Customer Number Increment: 1
   - Random seed: 1000000000000000
-- Uses DB2 plan: `@DB2_PLAN@` (CBSA)
+- Uses DB2 plan: `@CBSA_PLAN@` (CBSA)
 - DB2 subsystem: `@DB2_SUBSYSTEM@` (DBCG)
 
 ## CICS Configuration
@@ -318,7 +318,7 @@ The JCL files use the following symbolic parameters that must be replaced before
 - `@CSD_PREFIX@`: CSD dataset prefix (typically `CBSA.CICSREG`)
 - `@DB2_HLQ@`: DB2 high-level qualifier (typically `DSNC10`)
 - `@DB2_SUBSYSTEM@`: DB2 subsystem name (typically `DBCG`)
-- `@DB2_PLAN@`: DB2 plan name (typically `CBSA`)
+- `@CBSA_PLAN@`: DB2 plan name (typically `CBSA`)
 - `@BANK_LOADLIB@`: Load library name (typically `CBSA.CICSBSA.LOADLIB`)
 - `@BANK_DBRMLIB@`: DBRM library name (typically `CBSA.CICSBSA.DBRM`)
 - `@CBSA_INSTALL@`: Installation PDS name

@@ -17,13 +17,16 @@ DB2_HLQ ?= DB2V13
 DB2_SUBSYSTEM ?= DBD1
 DSN_HLQ ?= $(DB2_SUBSYSTEM)
 DB2_OWNER ?= $(USER)
-DB2_DB ?= CBSAMF2
-DB2_PLAN ?= CBSAMF2
-DB2_PACKAGE ?= PCBSAMF2
-DB2_DSNTEP_PLAN ?= DSNTEP13
 DB2_SUBSYSTEM_LOADLIB ?= $(DSN_HLQ).RUNLIB.LOAD
 DB2_VCAT ?= DBD1
 BANK_USER ?= CICSUSER
+CBSA_DB ?= CBSADB
+CBSA_PLAN ?= CBSAPLAN
+CBSA_PACKAGE ?= CBSAPKG
+DB2_DSNTEP_PLAN ?= DSNTEP13
+CBSA_ACCOUNT_STOGROUP ?= CBSABASG
+CBSA_CONTROL_STOGROUP ?= CBSACTSG
+CBSA_PROCTRAN_STOGROUP ?= CBSAPTSG
 
 # batchtsocmd command (from PyPI package batchtsocmd>=0.1.7)
 # Uses the CLI interface: batchtsocmd --systsin <file> --sysin <file> [options]
@@ -40,13 +43,17 @@ define run_db2cmd
 	       DB2_SUBSYSTEM='$(DB2_SUBSYSTEM)' \
 		   DSN_HLQ='$(DSN_HLQ)' \
 	       DB2_OWNER='$(DB2_OWNER)' \
-		   DB2_DB='$(DB2_DB)' \
-	       DB2_PLAN='$(DB2_PLAN)' \
-	       DB2_PACKAGE='$(DB2_PACKAGE)' \
+		   CBSA_DB='$(CBSA_DB)' \
+	       CBSA_PLAN='$(CBSA_PLAN)' \
+	       CBSA_PACKAGE='$(CBSA_PACKAGE)' \
 	       DB2_DSNTEP_PLAN='$(DB2_DSNTEP_PLAN)' \
 	       DB2_SUBSYSTEM_LOADLIB='$(DB2_SUBSYSTEM_LOADLIB)' \
 	       DB2_VCAT='$(DB2_VCAT)' \
-	       BANK_USER='$(BANK_USER)'; \
+	       BANK_USER='$(BANK_USER)' \
+		   CBSA_ACCOUNT_STOGROUP='$(CBSA_ACCOUNT_STOGROUP)' \
+		   CBSA_CONTROL_STOGROUP='$(CBSA_CONTROL_STOGROUP)' \
+		   CBSA_PROCTRAN_STOGROUP='$(CBSA_PROCTRAN_STOGROUP)' \
+		; \
 	envsubst < $(DB2SQL_DIR)/systsin.template > $$SYSTSIN_FILE; \
 	envsubst < $(DB2SQL_DIR)/$(1).sql > $$SYSIN_FILE; \
 	set +e; \
@@ -91,8 +98,8 @@ db2-help:
 	@echo "  DB2_HLQ=$(DB2_HLQ)"
 	@echo "  DB2_SUBSYSTEM=$(DB2_SUBSYSTEM)"
 	@echo "  DB2_OWNER=$(DB2_OWNER)"
-	@echo "  DB2_PLAN=$(DB2_PLAN)"
-	@echo "  DB2_PACKAGE=$(DB2_PACKAGE)"
+	@echo "  CBSA_PLAN=$(CBSA_PLAN)"
+	@echo "  CBSA_PACKAGE=$(CBSA_PACKAGE)"
 	@echo "  BANK_USER=$(BANK_USER)"
 	@echo ""
 
@@ -188,8 +195,8 @@ db2-show-config:
 	@echo "DB2_HLQ:           $(DB2_HLQ)"
 	@echo "DB2_SUBSYSTEM:     $(DB2_SUBSYSTEM)"
 	@echo "DB2_OWNER:         $(DB2_OWNER)"
-	@echo "DB2_PLAN:          $(DB2_PLAN)"
-	@echo "DB2_PACKAGE:       $(DB2_PACKAGE)"
+	@echo "CBSA_PLAN:          $(CBSA_PLAN)"
+	@echo "CBSA_PACKAGE:       $(CBSA_PACKAGE)"
 	@echo "DB2_DSNTEP_PLAN:   $(DB2_DSNTEP_PLAN)"
 	@echo "DB2_SUBSYSTEM_LOADLIB: $(DB2_SUBSYSTEM_LOADLIB)"
 	@echo "DB2_VCAT:          $(DB2_VCAT)"

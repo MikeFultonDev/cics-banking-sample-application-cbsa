@@ -18,7 +18,7 @@
 //* Change @DB2_SUBSYSTEM@ to DBCG
 //* - to the name of the DB2 Subsystem        *
 //*
-//* Change @DB2_PLAN@ to CBSA
+//* Change @CBSA_PLAN@ to CBSA
 //* - to the name of the DB2 Plan
 //*
 //* Change @BANK_LOADLIB@ to CBSA.CICSBSA.LOADLIB
@@ -107,7 +107,7 @@
 //SYSTSIN  DD *
  DSN SYSTEM(@DB2_SUBSYSTEM@)
  RUN PROGRAM(BANKDATA)  -
- PLAN(@DB2_PLAN@) -
+ PLAN(@CBSA_PLAN@) -
  PARM('1,10000,1,1000000000000000') -
  LIB('@BANK_LOADLIB@')
  END
