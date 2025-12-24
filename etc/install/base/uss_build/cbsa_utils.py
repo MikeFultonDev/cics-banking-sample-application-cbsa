@@ -20,6 +20,8 @@ from zoautil_py.exceptions import (
     ZOAUException
 )
 
+# Import db2cmd and tsocmd for DB2 and TSO operations
+from batchtsocmd import db2cmd, tsocmd
 
 class BuildConfig:
     """Load and manage build configuration"""
@@ -76,34 +78,41 @@ class BuildConfig:
 
 
 class MVSCommand:
-    """Execute MVS commands using ZOAU"""
+    """Execute MVS commands using batchtsocmd"""
     
     @staticmethod
     def run_tso(command: str, verbose: bool = False) -> Tuple[int, str, str]:
-        """Execute a TSO command using ZOAU mvscmd"""
+        """Execute a TSO command using batchtsocmd tsocmd API"""
         if verbose:
             print(f"Executing TSO: {command}")
         
         try:
-            # Use ZOAU mvscmd to execute TSO commands
-            response = mvscmd.execute(
-                pgm="IKJEFT01",
-                pgm_args=command,
+            # Use batchtsocmd tsocmd API to execute TSO commands
+            # The tsocmd function handles all the complexity of:
+            # - Setting up SYSTSIN with the TSO command
+            # - Configuring DD statements
+            # - Executing via IKJEFT01
+            # - Returning results
+            result = tsocmd(
+                command=command,
                 verbose=verbose
             )
             
             if verbose:
-                if response.stdout_response:
-                    print(f"STDOUT:\n{response.stdout_response}")
-                if response.stderr_response:
-                    print(f"STDERR:\n{response.stderr_response}")
+                print(f"Return code: {result.rc}")
+                if hasattr(result, 'output') and result.output:
+                    print(f"Output:\n{result.output}")
+                if hasattr(result, 'error') and result.error:
+                    print(f"Error:\n{result.error}")
             
-            return response.rc, response.stdout_response, response.stderr_response
-        except ZOAUException as e:
-            if verbose:
-                print(f"ZOAU Exception: {e}")
-            return e.response.rc, e.response.stdout_response, e.response.stderr_response
+            # Return tuple of (rc, stdout, stderr) for compatibility
+            stdout = result.output if hasattr(result, 'output') else ""
+            stderr = result.error if hasattr(result, 'error') else ""
+            return result.rc, stdout, stderr
+            
         except Exception as e:
+            if verbose:
+                print(f"Error executing TSO command: {e}")
             return 1, "", str(e)
     
     @staticmethod
@@ -210,95 +219,55 @@ class MVSCommand:
 
 
 class DB2Utilities:
-    """DB2 utilities using ZOAU"""
+    """DB2 utilities using batchtsocmd db2cmd API"""
     
     def __init__(self, config: BuildConfig):
         self.config = config
     
     def execute_sql(self, sql: str, verbose: bool = False) -> bool:
-        """Execute SQL statements via DB2 using ZOAU mvscmd
+        """Execute SQL statements via DB2 using batchtsocmd db2cmd
         
         Note: Uses DSNTEP2 for SQL execution (read-only queries).
         For DDL/DCL statements (CREATE, DROP, GRANT), use DSNTIAD instead.
-        See db2grant/ directory for DSNTIAD usage examples.
         """
         if verbose:
             print(f"Executing SQL:\n{sql}")
         
-        db2_subsystem = self.config.get('DB2_SUBSYSTEM')
+        db2_subsystem = self.config.get('DB2_SYSTEM')
         db2_hlq = self.config.get('DB2_HLQ')
-        dsntep_plan = self.config.get('DB2_DSNTEP_PLAN', 'DSNTEP2')
-        dsntep_lib = self.config.get('DB2_SUBSYSTEM_LOADLIB', f'{db2_hlq}.RUNLIB.LOAD')
-        
-        # Create temporary SQL file
-        temp_sql = f"/tmp/sql_{os.getpid()}.sql"
-        temp_systsin = f"/tmp/systsin_{os.getpid()}.txt"
+        dsntep_plan = self.config.get('DB2_PLAN', 'DSNTEP2')
+        dsntep_lib = self.config.get('DB2_TOOLLIB', f'{db2_hlq}.RUNLIB.LOAD')
         
         try:
-            # Write SQL to temporary file
-            with open(temp_sql, 'w') as f:
-                f.write(sql)
-            
-            # Create SYSTSIN input for DSN command
-            systsin_content = f"""DSN SYSTEM({db2_subsystem})
-RUN PROGRAM(DSNTEP2) PLAN({dsntep_plan}) LIB('{dsntep_lib}')
-END
-"""
-            with open(temp_systsin, 'w') as f:
-                f.write(systsin_content)
-            
-            # Define DD statements for IKJEFT01
-            dds = [
-                DDStatement('SYSTSPRT', DatasetDefinition('*', disposition='NEW')),
-                DDStatement('SYSTSIN', FileDefinition(temp_systsin, 
-                                                      normal_disposition='SHR',
-                                                      status_group='OLD')),
-                DDStatement('SYSPRINT', DatasetDefinition('*', disposition='NEW')),
-                DDStatement('SYSUDUMP', DatasetDefinition('*', disposition='NEW')),
-                DDStatement('SYSIN', FileDefinition(temp_sql,
-                                                    normal_disposition='SHR',
-                                                    status_group='OLD'))
-            ]
-            
-            # Execute IKJEFT01 with ZOAU mvscmd
-            if verbose:
-                print(f"Executing DB2 SQL via IKJEFT01")
-            
-            response = mvscmd.execute(
-                pgm='IKJEFT01',
-                dds=dds,
+            # Execute DB2 command using batchtsocmd db2cmd API
+            # The db2cmd function handles all the complexity of:
+            # - Creating temporary files for SQL input
+            # - Setting up SYSTSIN with DSN commands
+            # - Configuring DD statements
+            # - Executing via IKJEFT01
+            # - Cleaning up temporary files
+            result = db2cmd(
+                subsystem=db2_subsystem,
+                sql=sql,
+                plan=dsntep_plan,
+                steplib=dsntep_lib,
                 verbose=verbose
             )
             
             if verbose:
-                print(f"Return code: {response.rc}")
-                if response.stdout_response:
-                    print(f"Output:\n{response.stdout_response}")
-                if response.stderr_response:
-                    print(f"Errors:\n{response.stderr_response}")
+                print(f"Return code: {result.rc}")
+                if hasattr(result, 'output') and result.output:
+                    print(f"Output:\n{result.output}")
+                if hasattr(result, 'error') and result.error:
+                    print(f"Errors:\n{result.error}")
             
             # Check return code (0 = success)
-            if response.rc != 0:
-                if verbose:
-                    print(f"SQL execution failed with return code: {response.rc}")
-                return False
+            return result.rc == 0
             
-            return True
-        except ZOAUException as e:
-            if verbose:
-                print(f"ZOAU execution failed: {e}")
-                print(f"Return code: {e.response.rc}")
-                print(f"Output: {e.response.stdout_response}")
-                print(f"Errors: {e.response.stderr_response}")
-            return False
         except Exception as e:
             if verbose:
                 print(f"Error executing SQL: {e}")
             return False
-        finally:
-            for f in [temp_sql, temp_systsin]:
-                if os.path.exists(f):
-                    os.remove(f)
 
 
 def print_banner(message: str):

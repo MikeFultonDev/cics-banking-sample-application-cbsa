@@ -29,14 +29,14 @@ These grants enable:
 
 ## Usage with batchtsocmd
 
-Use [`batchtsocmd`](https://pypi.org/project/batchtsocmd/) (version 0.1.9+) to execute the grants:
+Use [`batchtsocmd`](https://pypi.org/project/batchtsocmd/) (version 0.1.11+) to execute the grants:
 
 ```bash
 # Set environment variables
-export DB2_SUBSYSTEM=DBD1
+export DB2_SYSTEM=DBD1
 export DB2_OWNER=FULTONM
 export DB2_DSNTIAD_PLAN=DSNTIAD
-export DB2_SUBSYSTEM_LOADLIB=DBD1.RUNLIB.LOAD
+export DB2_TOOLLIB=DBD1.RUNLIB.LOAD
 
 # Generate files using envsubst
 envsubst < systsin.template > /tmp/grant.systsin
@@ -72,7 +72,6 @@ If batchtsocmd is unavailable or DSNTIAD plan issues occur:
 
 ## See Also
 
-- [`systsin.template`](systsin.template:1) - TSO SYSTSIN template for DSNTIAD
 - [`access.sql`](access.sql:1) - SQL grant statements
 - [`../db2.mk`](../db2.mk:1) - Makefile with grant automation
 - [`../requirements.txt`](../requirements.txt:1) - Python dependencies including batchtsocmd

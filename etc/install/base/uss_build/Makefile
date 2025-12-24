@@ -25,7 +25,7 @@ LOAD_DIR := $(BUILD_DIR)/load
 BMS_MACRO_DIR := $(BUILD_DIR)/bmsmac
 
 # Ensure build directories exist
-$(shell mkdir -p $(BUILD_DIR) $(OBJ_DIR) $(DBRM_DIR) $(LOAD_DIR))
+$(shell mkdir -p $(BMS_MACRO_DIR) $(BUILD_DIR) $(OBJ_DIR) $(DBRM_DIR) $(LOAD_DIR))
 
 # Target MVS datasets
 LOADLIB_HLQ ?= CBSA.CICSBSA
@@ -111,7 +111,7 @@ help:
 	@echo ""
 
 # Complete installation
-install: db2-create cobol-programs assemble-maps link-programs db2-bind-packages db2-bind-plan populate verify
+install: db2-create assemble-maps cobol-programs link-programs db2-bind-packages db2-bind-plan populate verify
 	@echo ""
 	@echo "=========================================="
 	@echo "CBSA Installation Complete!"

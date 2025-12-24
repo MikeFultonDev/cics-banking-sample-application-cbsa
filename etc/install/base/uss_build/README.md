@@ -106,8 +106,7 @@ vi build.conf
 ```
 
 Key settings to update:
-- `HLQ`: High-level qualifier for datasets (e.g., `CBSA`)
-- `DB2_SUBSYSTEM`: Your DB2 subsystem name (e.g., `DBCG`)
+- `DB2_SYSTEM`: Your DB2 subsystem name (e.g., `DBCG`)
 - `DB2_OWNER`: DB2 owner/qualifier (e.g., `IBMUSER`)
 - `CICS_HLQ`: CICS high-level qualifier (e.g., `DFH560.CICS`)
 - `ZOSCONNECT_*`: z/OS Connect paths and ports
@@ -422,7 +421,7 @@ CICS_REGION=CICSTS61
 ### DB2 Configuration
 ```bash
 DB2_HLQ=DSNC10
-DB2_SUBSYSTEM=DBCG
+DB2_SYSTEM=DBCG
 DB2_OWNER=IBMUSER
 CBSA_PLAN=CBSA
 CBSA_PACKAGE=PCBSA

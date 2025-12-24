@@ -120,7 +120,7 @@ def populate_data(config: BuildConfig, start_cust: int = 1, end_cust: int = 1000
     loadlib = config.get('LOADLIB')
     dbrm_lib = config.get('DBRM')
     db2_hlq = config.get('DB2_HLQ')
-    db2_subsystem = config.get('DB2_SUBSYSTEM')
+    db2_subsystem = config.get('DB2_SYSTEM')
     db2_plan = config.get('CBSA_PLAN')
     
     # Build TSO command to run BANKDATA

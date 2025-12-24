@@ -195,7 +195,7 @@ with similar names.
    SDSNEXIT. Depending on your installation, SDSNEXIT may have an additional
    qualifier which you will need to insert into the JCL yourself.
 
-   @DB2_SUBSYSTEM@ is the 1-4 character name of the Db2 subsystem you are
+   @DB2_SYSTEM@ is the 1-4 character name of the Db2 subsystem you are
    using, which must be on the same MVS image as the JCL is submitted (and
    the CICS region).
 
@@ -211,11 +211,11 @@ with similar names.
    @BANK_PACKAGE@ is the Db2 package you intend to bind the plan into. This
    is required as we also need to use Java. For example, PCBSA.
 
-   @DB2_DSNTEP_PLAN@ is the name of the plan that the Db2 utility program is
+   @DB2_PLAN@ is the name of the plan that the Db2 utility program is
    bound with. This is installation dependent. You may need to ask your Db2
    administrator, or use Db2 to inquire on possible plan names.
 
-   @DB2_SUBSYSTEM_LOADLIB@ is the name of the dataset containing the Db2
+   @DB2_TOOLLIB@ is the name of the dataset containing the Db2
    utility program DSNTEP2. Typically this has "RUNLIB" as part of the name,
    but this is installation dependent.
 
