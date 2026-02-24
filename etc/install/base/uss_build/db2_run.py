@@ -18,7 +18,7 @@ try:
     from batchtsocmd.main import db2cmd, db2admin
     from batchtsocmd import tsocmd
 except ImportError:
-    print("ERROR: batchtsocmd package not found. Install with: pip install batchtsocmd>=0.1.12")
+    print("ERROR: batchtsocmd package not found. Install with: pip install batchtsocmd>=0.1.13")
     sys.exit(1)
 
 # Import cbsa_utils for configuration loading

@@ -29,7 +29,7 @@ These grants enable:
 
 ## Usage with batchtsocmd
 
-Use [`batchtsocmd`](https://pypi.org/project/batchtsocmd/) (version 0.1.12+) to execute the grants:
+Use [`batchtsocmd`](https://pypi.org/project/batchtsocmd/) (version 0.1.13+) to execute the grants:
 
 ```bash
 # Set environment variables
