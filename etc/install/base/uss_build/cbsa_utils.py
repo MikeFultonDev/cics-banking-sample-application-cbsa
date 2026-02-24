@@ -20,8 +20,8 @@ from zoautil_py.exceptions import (
     ZOAUException
 )
 
-# Import db2cmd and tsocmd for DB2 and TSO operations
-from batchtsocmd import db2cmd, tsocmd
+# Import db2cmd, db2admin, and tsocmd for DB2 and TSO operations
+from batchtsocmd import db2cmd, db2admin, tsocmd
 
 class BuildConfig:
     """Load and manage build configuration"""
@@ -219,7 +219,7 @@ class MVSCommand:
 
 
 class DB2Utilities:
-    """DB2 utilities using batchtsocmd db2cmd API"""
+    """DB2 utilities using batchtsocmd db2cmd/db2admin API"""
     
     def __init__(self, config: BuildConfig):
         self.config = config
@@ -228,7 +228,7 @@ class DB2Utilities:
         """Execute SQL statements via DB2 using batchtsocmd db2cmd
         
         Note: Uses DSNTEP2 for SQL execution (read-only queries).
-        For DDL/DCL statements (CREATE, DROP, GRANT), use DSNTIAD instead.
+        For DDL/DCL statements (CREATE, DROP, GRANT), use db2admin with DSNTIAD instead.
         """
         if verbose:
             print(f"Executing SQL:\n{sql}")
@@ -240,6 +240,7 @@ class DB2Utilities:
         
         try:
             # Execute DB2 command using batchtsocmd db2cmd API
+            # Note: For grant operations, use db2admin instead
             # The db2cmd function handles all the complexity of:
             # - Creating temporary files for SQL input
             # - Setting up SYSTSIN with DSN commands

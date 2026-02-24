@@ -51,13 +51,13 @@ else
   # Check if required Python packages are installed
   echo "Checking Python dependencies..."
   
-  # Check batchtsocmd (required: >=0.1.11)
+  # Check batchtsocmd (required: >=0.1.12)
   # Note: batchtsocmd will automatically install zos-ccsid-converter as a dependency
   python3 -c "import batchtsocmd" 2>/dev/null
   if [ $? -ne 0 ]; then
     echo "WARNING: batchtsocmd package not found" >&2
-    echo "Installing batchtsocmd>=0.1.11..." >&2
-    pip install --upgrade "batchtsocmd>=0.1.11"
+    echo "Installing batchtsocmd>=0.1.12..." >&2
+    pip install --upgrade "batchtsocmd>=0.1.12"
     if [ $? -eq 0 ]; then
       echo "✓ batchtsocmd successfully installed" >&2
     else
@@ -68,12 +68,12 @@ else
     # Check batchtsocmd version
     DB2CMD_VERSION=$(python3 -c "import batchtsocmd; print(batchtsocmd.__version__)" 2>/dev/null)
     if [ $? -eq 0 ]; then
-      # Verify it's at least version 0.1.11
-      python3 -c "import batchtsocmd; from packaging import version; assert version.parse(batchtsocmd.__version__) >= version.parse('0.1.11')" 2>/dev/null
+      # Verify it's at least version 0.1.12
+      python3 -c "import batchtsocmd; from packaging import version; assert version.parse(batchtsocmd.__version__) >= version.parse('0.1.12')" 2>/dev/null
       if [ $? -ne 0 ]; then
-        echo "WARNING: batchtsocmd version ${DB2CMD_VERSION} is older than required 0.1.11" >&2
-        echo "Upgrading to batchtsocmd>=0.1.11..." >&2
-        pip install --upgrade "batchtsocmd>=0.1.11"
+        echo "WARNING: batchtsocmd version ${DB2CMD_VERSION} is older than required 0.1.12" >&2
+        echo "Upgrading to batchtsocmd>=0.1.12..." >&2
+        pip install --upgrade "batchtsocmd>=0.1.12"
         if [ $? -eq 0 ]; then
           DB2CMD_VERSION=$(python3 -c "import batchtsocmd; print(batchtsocmd.__version__)" 2>/dev/null)
           echo "✓ batchtsocmd upgraded to version ${DB2CMD_VERSION}" >&2

@@ -43,7 +43,7 @@ include $(mkfile_dir)/db2.mk
         db2bind-packages db2bind-plan db2bind-rebind-plan free-plan db2-help
 
 # Configuration
-CONFIG_FILE ?= build.conf
+BUILD_CONFIG ?= $(mkfile_dir)/build.conf
 PYTHON ?= python3
 VERBOSE ?=
 

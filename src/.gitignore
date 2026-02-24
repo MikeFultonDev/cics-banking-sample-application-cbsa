@@ -4,3 +4,4 @@
 *.war
 appscan-config.xml
 scanIt*.bat
+etc/install/base/uss_build/__pycache__
