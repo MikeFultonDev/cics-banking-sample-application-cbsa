@@ -6,9 +6,19 @@
       "paths": []
     }
   ],
-
   "buildSettings": {
     "serverBuildTool": "/u/fultonm/grubServer/grub-main/bin/grub_server",
     "remoteOefDir": "/usr/lpp/IBM/foz/v1r1/bin"
-    }
+  },
+  "listingFileDetails": {
+    "remote": [
+      {
+        "connectionName": "fultonm_9_47_93_202",
+        "connectionType": "zosmf",
+        "uss-directories": [
+          "~/projects/cics-banking-sample-application-cbsa"
+        ]
+      }
+    ]
+  }
 }

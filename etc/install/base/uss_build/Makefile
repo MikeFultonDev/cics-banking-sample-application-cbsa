@@ -153,9 +153,8 @@ verify:
 	$(PYTHON) 05_populate_data.py -c $(CONFIG_FILE) --verify-only $(VERBOSE_FLAG)
 
 # Clean targets (now using db2.mk targets)
-clean-db2:
+clean-db2: db2-drop
 	@echo "Dropping DB2 artifacts..."
-	@$(MAKE) db2-drop
 
 clean-vsam:
 	@echo "Deleting VSAM files..."
