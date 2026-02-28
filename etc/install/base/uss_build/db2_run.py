@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DB2 SQL Runner Script
-Loads build.conf, performs variable substitution in SQL files, and runs them using db2cmd/db2admin
+Loads build.conf, performs variable substitution in SQL files, and runs them using db2sql/db2op
 Copyright IBM Corp. 2023, 2025
 """
 
@@ -15,10 +15,9 @@ import tempfile
 
 # Import batchtsocmd for DB2 operations
 try:
-    from batchtsocmd.main import db2cmd, db2admin
-    from batchtsocmd import tsocmd
+    from batchtsocmd.main import db2sql, db2op
 except ImportError:
-    print("ERROR: batchtsocmd package not found. Install with: pip install batchtsocmd>=0.1.13")
+    print("ERROR: batchtsocmd package not found. Install with: pip install batchtsocmd>=0.2.0")
     sys.exit(1)
 
 # Import cbsa_utils for configuration loading
@@ -174,9 +173,9 @@ class DB2Runner:
             # For DSNTIAD operations (grants), use db2admin
             # For DSNTEP operations (regular SQL), use db2cmd
             if use_dsntiad:
-                # Run using db2admin for DSNTIAD operations (grants)
-                # Note: db2admin does not support dbrmlib parameter
-                rc = db2admin(
+                # Run using db2op for DSNTIAD operations (grants)
+                # Note: db2op does not support dbrmlib parameter
+                rc = db2op(
                     sysin_content=substituted_sql,
                     system=db2_system,
                     plan=db2_plan,
@@ -187,10 +186,9 @@ class DB2Runner:
                     verbose=self.verbose
                 )
             else:
-                # Run using db2cmd for DSNTEP2 operations
-                # db2cmd takes sysin_content and returns an integer return code
+                # Run using db2sql for DSNTEP2 operations
                 if self.verbose:
-                    print(f"\nCalling db2cmd with:")
+                    print(f"\nCalling db2sql with:")
                     print(f"  system={db2_system}")
                     print(f"  plan={db2_plan}")
                     print(f"  toollib={db2_toollib}")
@@ -201,7 +199,7 @@ class DB2Runner:
                     print(f"  sysin_content length={len(substituted_sql)} bytes")
                 
                 if dbrmlib:
-                    rc = db2cmd(
+                    rc = db2sql(
                         sysin_content=substituted_sql,
                         system=db2_system,
                         plan=db2_plan,
@@ -213,7 +211,7 @@ class DB2Runner:
                         verbose=self.verbose
                     )
                 else:
-                    rc = db2cmd(
+                    rc = db2sql(
                         sysin_content=substituted_sql,
                         system=db2_system,
                         plan=db2_plan,
@@ -314,7 +312,7 @@ def main():
     parser.add_argument(
         '--use-dsntiad',
         action='store_true',
-        help='Use DB2_DSNTIAD_PLAN with db2admin instead of DB2_DSNTEP_PLAN with db2cmd (for grant operations)'
+        help='Use DB2_DSNTIAD_PLAN with db2op instead of DB2_DSNTEP_PLAN with db2sql (for grant operations)'
     )
     parser.add_argument(
         '-v', '--verbose',

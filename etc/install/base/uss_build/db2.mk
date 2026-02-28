@@ -1,37 +1,49 @@
 # CBSA DB2 Management Makefile
-# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd package
+# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd 0.2.0 CLI
 # Copyright IBM Corp. 2023, 2025
 
 .PHONY: db2-help db2-create db2-drop db2-bind-packages db2-bind-plan db2-bind-all \
         db2-create-database db2-create-stogroups db2-create-tablespaces \
-        db2-create-tables db2-create-indexes db2-grant db2-test
+        db2-create-tables db2-create-indexes db2-grant db2-rebuild db2-show-config
 
 # DB2 SQL and grant directories
 DB2SQL_DIR := $(mkfile_dir)/db2sql
 DB2GRANT_DIR := $(mkfile_dir)/db2grant
 
-# Configuration from build.conf (BUILD_CONFIG is defined in parent Makefile)
--include build.conf
-
-# Python script for DB2 operations
-DB2_RUN := $(PYTHON) $(mkfile_dir)/db2_run.py
+# build.conf path and db2subst utility
+# Use = (deferred) so $(PYTHON) expands at use time (PYTHON is defined in parent Makefile)
+BUILD_CONF = $(mkfile_dir)/build.conf
+DB2SUBST   = $(PYTHON) $(mkfile_dir)/bin/db2subst
 
 # Verbose flag
 VERBOSE_FLAG := $(if $(VERBOSE),-v,)
 
-# Helper function to run SQL files using Python script
-# Parameters: $(1) = SQL file name (without .sql), $(2) = optional --dbrmlib argument
+# Helper function to run SQL files via db2sql CLI
+# db2subst expands ${VAR} from build.conf, pipes result to db2sql via stdin
+# Parameters: $(1) = SQL file name (without .sql)
 define run_db2cmd
 	@echo "Running $(1)..."
-	$(DB2_RUN) $(DB2SQL_DIR)/$(1).sql --config $(BUILD_CONFIG) $(VERBOSE_FLAG)
+	. $(BUILD_CONF) && $(DB2SUBST) $(DB2SQL_DIR)/$(1).sql --config $(BUILD_CONF) | \
+	    db2sql \
+	    --system $${DB2_SYSTEM} \
+	    --plan $${DB2_DSNTEP_PLAN} \
+	    --toollib $${DB2_TOOLLIB} \
+	    --steplib $${DB2_HLQ}.SDSNEXIT:$${DB2_HLQ}.SDSNLOAD \
+	    $(VERBOSE_FLAG)
 endef
 
-# Helper function for DB2 grant operations
+# Helper function for DB2 grant operations via db2sql CLI
 # Parameters: $(1) = SQL file name (without .sql)
-# Note: Grant operations use DSNTIAD plan instead of DSNTEP2
+# Note: GRANT is plain SQL executed via DSNTEP2 (db2sql), not DSNTIAD
 define run_db2grant
 	@echo "Running grant: $(1)..."
-	@$(DB2_RUN) $(DB2GRANT_DIR)/$(1).sql --config $(BUILD_CONFIG) --use-dsntiad $(VERBOSE_FLAG)
+	. $(BUILD_CONF) && $(DB2SUBST) $(DB2GRANT_DIR)/$(1).sql --config $(BUILD_CONF) | \
+	    db2sql \
+	    --system $${DB2_SYSTEM} \
+	    --plan $${DB2_DSNTEP_PLAN} \
+	    --toollib $${DB2_TOOLLIB} \
+	    --steplib $${DB2_HLQ}.SDSNEXIT:$${DB2_HLQ}.SDSNLOAD \
+	    $(VERBOSE_FLAG)
 endef
 
 # DB2 Help
@@ -51,17 +63,15 @@ db2-help:
 	@echo "  db2-bind-all         - Bind packages and plan"
 	@echo "  db2-bind-packages    - Bind DB2 packages only"
 	@echo "  db2-bind-plan        - Bind DB2 plan only"
-	@echo "  db2-grant            - Grant permissions to BANK_USER"
+	@echo "  db2-grant            - Grant permissions"
 	@echo ""
 	@echo "Database Cleanup:"
 	@echo "  db2-drop             - Drop all DB2 artifacts"
-	@echo ""
-	@echo "Testing:"
-	@echo "  db2-test             - Test DB2 connection with sample query"
+	@echo "  db2-rebuild          - Drop and recreate all DB2 artifacts"
 	@echo ""
 	@echo "Configuration:"
-	@echo "  Configuration file: $(BUILD_CONFIG)"
-	@echo "  Use 'make db2-show-config' to view current settings"
+	@echo "  db2-show-config      - Show current DB2 configuration"
+	@echo "  Configuration file: $(BUILD_CONF)"
 	@echo ""
 
 # Create all DB2 artifacts using INSTDB2.jcl
@@ -108,48 +118,54 @@ db2-create-indexes:
 	@echo "Indexes created"
 
 # Bind all packages and plan
-db2-bind-all: db2-bind-packages db2-bind-plan db2-grant
+db2-bind-all: db2-bind-packages db2-grant
 	@echo "DB2 binding complete"
 
-# Bind DB2 packages and plan
+# Bind DB2 packages and plan using db2bind CLI
+# db2bind generates SYSTSIN directly - no SQL substitution needed
 db2-bind-packages:
 	@echo "Binding DB2 packages and plan..."
-	$(call run_db2cmd,BIND01)
+	. $(BUILD_CONF) && db2bind \
+	    --system $${DB2_SYSTEM} \
+	    --package $${CBSA_PACKAGE} \
+	    --owner $${DB2_OWNER} \
+	    --qualifier $${DB2_OWNER} \
+	    --action REPLACE \
+	    --member CREACC \
+	    --member CRECUST \
+	    --member DBCRFUN \
+	    --member DELACC \
+	    --member DELCUS \
+	    --member INQACC \
+	    --member INQACCCU \
+	    --member BANKDATA \
+	    --member UPDACC \
+	    --member XFRFUN \
+	    --plan $${CBSA_PLAN} \
+	    --isolation UR \
+	    --pklist "NULLID.*" \
+	    --pklist "$${CBSA_PACKAGE}.*" \
+	    --dbrmlib $${DB2_DBRMLIB} \
+	    --steplib $${DB2_HLQ}.SDSNEXIT:$${DB2_HLQ}.SDSNLOAD \
+	    $(VERBOSE_FLAG)
 	@echo "✓ DB2 packages and plan bound successfully"
-	@echo "Granting permissions to $(BANK_USER)..."
-	$(call run_db2grant,grant)
-	@echo "✓ Permissions granted successfully"
 
 # Bind DB2 plan (requires packages to exist)
 db2-bind-plan:
 	@echo "Note: db2-bind-plan is now included in db2-bind-packages"
 	@echo "Use 'make db2-bind-packages' to bind packages and plan together"
 
-# Grant permissions
+# Grant permissions via db2sql CLI (GRANT is plain SQL via DSNTEP2)
 db2-grant:
-	@echo "Granting permissions to $(BANK_USER)..."
+	@echo "Granting permissions..."
 	@$(call run_db2grant,grant)
 	@echo "✓ Permissions granted successfully"
 
 # Drop all DB2 artifacts
 db2-drop:
 	@echo "Dropping all DB2 artifacts..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/DROPDB2.jcl) | $(SUBMIT_JCL)
-	@echo "✓ Drop job submitted"
-	@echo "Warning: This will delete all CBSA database objects"
-
-# Test DB2 connection
-db2-test:
-	@echo "Testing DB2 connection..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/BTCHSQL.jcl) | $(SUBMIT_JCL)
-	@echo "Test query job submitted"
-
-# Alternative: Create everything using single INSTDB2.jcl
-db2-install-single:
-	@echo "Creating all DB2 artifacts using INSTDB2.jcl..."
-	@$(call substitute_jcl,$(DB2JCL_DIR)/INSTDB2.jcl) | $(SUBMIT_JCL)
-	@echo "Installation job submitted"
-	@echo "Note: This creates database, storage groups, tablespaces, tables, and indexes"
+	@$(call run_db2cmd,drop-db2)
+	@echo "✓ DB2 artifacts dropped successfully"
 
 # Show current DB2 configuration
 db2-show-config:

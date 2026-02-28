@@ -4,8 +4,8 @@
 # Batch TSO Command - for executing TSO commands in batch mode
 # Published package from PyPI: https://pypi.org/project/batchtsocmd/
 # Depends on: zos-ccsid-converter
-# Note: Version 0.1.13+ required for db2admin CLI interface
-batchtsocmd>=0.1.13
+# Note: Version 0.2.0+ required for db2sql/db2op/db2bind/db2run CLI interfaces
+batchtsocmd>=0.2.0
 
 # IBM Z Open Automation Utilities
 # Note: zoautil_py is typically pre-installed on z/OS systems

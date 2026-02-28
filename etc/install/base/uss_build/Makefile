@@ -32,6 +32,11 @@ LOADLIB_HLQ ?= CBSA.CICSBSA
 LOADLIB := $(LOADLIB_HLQ).LOADLIB
 DSECT_LIB := $(LOADLIB_HLQ).DSECT
 
+# Configuration (defined before includes so sub-makefiles can use these variables)
+BUILD_CONFIG ?= $(mkfile_dir)/build.conf
+PYTHON ?= python3
+VERBOSE ?=
+
 # Include COBOL compilation, BMS assembly, linking, and DB2 makefiles
 include $(mkfile_dir)/compile.mk
 include $(mkfile_dir)/assemble.mk
@@ -41,11 +46,6 @@ include $(mkfile_dir)/db2.mk
         setup-db2-only compile-only assemble-only link-only db2bind-only populate-only \
         clean-db2 clean-vsam clean-all compile-programs compile-maps assemble-maps link-programs \
         db2bind-packages db2bind-plan db2bind-rebind-plan free-plan db2-help
-
-# Configuration
-BUILD_CONFIG ?= $(mkfile_dir)/build.conf
-PYTHON ?= python3
-VERBOSE ?=
 
 # Add -v flag if VERBOSE is set
 ifeq ($(VERBOSE),1)

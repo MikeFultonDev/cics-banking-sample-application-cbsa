@@ -20,8 +20,8 @@ from zoautil_py.exceptions import (
     ZOAUException
 )
 
-# Import db2cmd, db2admin, and tsocmd for DB2 and TSO operations
-from batchtsocmd import db2cmd, db2admin, tsocmd
+# Import db2sql, db2op, and tsocmd for DB2 and TSO operations
+from batchtsocmd import db2sql, db2op, tsocmd
 
 class BuildConfig:
     """Load and manage build configuration"""
@@ -225,10 +225,10 @@ class DB2Utilities:
         self.config = config
     
     def execute_sql(self, sql: str, verbose: bool = False) -> bool:
-        """Execute SQL statements via DB2 using batchtsocmd db2cmd
+        """Execute SQL statements via DB2 using batchtsocmd db2sql
         
-        Note: Uses DSNTEP2 for SQL execution (read-only queries).
-        For DDL/DCL statements (CREATE, DROP, GRANT), use db2admin with DSNTIAD instead.
+        Note: Uses DSNTEP2 for SQL execution (DDL, DML, DQL, GRANT).
+        For Db2 operator commands (-DISPLAY, -START, -STOP), use db2op with DSNTIAD instead.
         """
         if verbose:
             print(f"Executing SQL:\n{sql}")
@@ -239,31 +239,22 @@ class DB2Utilities:
         dsntep_lib = self.config.get('DB2_TOOLLIB', f'{db2_hlq}.RUNLIB.LOAD')
         
         try:
-            # Execute DB2 command using batchtsocmd db2cmd API
-            # Note: For grant operations, use db2admin instead
-            # The db2cmd function handles all the complexity of:
-            # - Creating temporary files for SQL input
-            # - Setting up SYSTSIN with DSN commands
-            # - Configuring DD statements
-            # - Executing via IKJEFT01
-            # - Cleaning up temporary files
-            result = db2cmd(
-                subsystem=db2_subsystem,
-                sql=sql,
+            # Execute DB2 SQL using batchtsocmd db2sql API
+            # db2sql handles DDL, DML, DQL, and GRANT via DSNTEP2
+            # For Db2 operator commands, use db2op instead
+            rc = db2sql(
+                sysin_content=sql,
+                system=db2_subsystem,
                 plan=dsntep_plan,
-                steplib=dsntep_lib,
+                toollib=dsntep_lib,
                 verbose=verbose
             )
             
             if verbose:
-                print(f"Return code: {result.rc}")
-                if hasattr(result, 'output') and result.output:
-                    print(f"Output:\n{result.output}")
-                if hasattr(result, 'error') and result.error:
-                    print(f"Errors:\n{result.error}")
+                print(f"Return code: {rc}")
             
             # Check return code (0 = success)
-            return result.rc == 0
+            return rc == 0
             
         except Exception as e:
             if verbose:
