@@ -2,26 +2,26 @@
 """
 CBSA Data Population Script
 Equivalent to BANKDATA.jcl - Creates VSAM files and populates DB2 tables
-Rewritten to use batchtsocmd 0.2.1 services (db2sql, db2op, tsocmd, db2run)
+Uses Z Open Automation Utilities (ZOAU) for VSAM operations
+Uses batchtsocmd 0.2.1 for DB2 operations
 """
 
 import sys
 import os
 from cbsa_utils import BuildConfig, print_banner, print_step, check_prerequisites
-from batchtsocmd import tsocmd, db2sql, db2run
+from batchtsocmd import db2sql, db2run
+
+# Import ZOAU for VSAM operations
+from zoautil_py import datasets
 
 
 def check_vsam_exists(dataset_name: str, verbose: bool = False) -> bool:
-    """Check if a VSAM dataset exists using tsocmd"""
+    """Check if a VSAM dataset exists using ZOAU"""
     if verbose:
         print(f"Checking if {dataset_name} exists...")
     
     try:
-        result = tsocmd(
-            command=f"LISTCAT ENTRIES('{dataset_name}')",
-            verbose=verbose
-        )
-        return result.rc == 0
+        return datasets.exists(dataset_name)
     except Exception as e:
         if verbose:
             print(f"Error checking VSAM existence: {e}")
@@ -29,51 +29,84 @@ def check_vsam_exists(dataset_name: str, verbose: bool = False) -> bool:
 
 
 def create_vsam_ksds(dataset_name: str, params: dict, verbose: bool = False) -> bool:
-    """Create a VSAM KSDS using tsocmd with IDCAMS"""
+    """Create a VSAM KSDS using ZOAU datasets.create"""
     if verbose:
         print(f"Creating VSAM KSDS: {dataset_name}")
     
-    # Build IDCAMS DEFINE CLUSTER command
-    idcams_cmd = f"""DEFINE CLUSTER -
-  (NAME('{dataset_name}') -
-   {params.get('SPACE', 'CYLINDERS(6 6)')} -
-   KEYS({params.get('KEYS', '12 0')}) -
-   RECORDSIZE({params.get('RECORDSIZE', '681 681')}) -
-   SHAREOPTIONS({params.get('SHAREOPTIONS', '2 3')}) -
-   {params.get('TYPE', 'INDEXED')} -
-   {params.get('LOG', 'LOG(NONE)')})"""
-    
-    if params.get('REUSE'):
-        idcams_cmd += " -\n  REUSE"
-    
-    if params.get('FREESPACE'):
-        idcams_cmd += f" -\n  FREESPACE({params['FREESPACE']})"
-    
     try:
-        result = tsocmd(
-            command=idcams_cmd,
-            verbose=verbose
+        # Delete if exists
+        if datasets.exists(dataset_name):
+            if verbose:
+                print(f"Dataset {dataset_name} already exists, deleting...")
+            datasets.delete(dataset_name)
+        
+        # Parse space parameters
+        space = params.get('SPACE', 'CYLINDERS(6 6)')
+        if 'CYLINDERS' in space:
+            # Extract primary and secondary from "CYLINDERS(6 6)"
+            import re
+            match = re.search(r'CYLINDERS\((\d+)\s+(\d+)\)', space)
+            if match:
+                primary = int(match.group(1))
+                secondary = int(match.group(2))
+            else:
+                primary, secondary = 6, 6
+            space_type = 'CYL'
+        else:
+            primary, secondary = 6, 6
+            space_type = 'CYL'
+        
+        # Parse keys (e.g., "12 0" means length=12, offset=0)
+        keys = params.get('KEYS', '12 0').split()
+        key_length = int(keys[0])
+        key_offset = int(keys[1]) if len(keys) > 1 else 0
+        
+        # Parse record size (e.g., "681 681" means average=681, max=681)
+        recordsize = params.get('RECORDSIZE', '681 681').split()
+        record_length = int(recordsize[1]) if len(recordsize) > 1 else int(recordsize[0])
+        
+        # Parse shareoptions (e.g., "2 3")
+        shareoptions = params.get('SHAREOPTIONS', '2 3')
+        
+        # Parse freespace if provided (e.g., "3 3")
+        freespace_ci = 0
+        freespace_ca = 0
+        if 'FREESPACE' in params:
+            fs = params['FREESPACE'].split()
+            freespace_ci = int(fs[0]) if len(fs) > 0 else 0
+            freespace_ca = int(fs[1]) if len(fs) > 1 else 0
+        
+        # Create VSAM KSDS using ZOAU
+        # ZOAU datasets.create for VSAM KSDS
+        datasets.create(
+            name=dataset_name,
+            type='KSDS',
+            primary_space=primary,
+            secondary_space=secondary,
+            space_unit=space_type,
+            key_length=key_length,
+            key_offset=key_offset,
+            record_length=record_length,
+            shareoptions=shareoptions,
+            reuse=params.get('REUSE', False),
+            freespace_ci=freespace_ci,
+            freespace_ca=freespace_ca,
+            log=params.get('LOG', 'NONE')
         )
         
-        if result.rc == 0:
-            if verbose:
-                print(f"✓ {dataset_name} created successfully")
-            return True
-        else:
-            if verbose:
-                print(f"✗ Failed to create {dataset_name} (RC={result.rc})")
-                if hasattr(result, 'output'):
-                    print(f"Output: {result.output}")
-            return False
-            
+        if verbose:
+            print(f"✓ {dataset_name} created successfully")
+        
+        return True
+        
     except Exception as e:
         if verbose:
-            print(f"Error creating VSAM: {e}")
+            print(f"✗ Failed to create {dataset_name}: {e}")
         return False
 
 
 def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
-    """Create VSAM files for CBSA (skip if already exist)"""
+    """Create VSAM files for CBSA using ZOAU (skip if already exist)"""
     
     print_banner("Creating VSAM Files")
     
@@ -92,8 +125,7 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
             'KEYS': '12 0',
             'RECORDSIZE': '681 681',
             'SHAREOPTIONS': '2 3',
-            'TYPE': 'INDEXED',
-            'LOG': 'LOG(NONE)',
+            'LOG': 'NONE',
             'REUSE': True,
             'FREESPACE': '3 3'
         }
@@ -117,8 +149,7 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
             'KEYS': '16 4',
             'RECORDSIZE': '259 259',
             'SHAREOPTIONS': '2 3',
-            'TYPE': 'INDEXED',
-            'LOG': 'LOG(UNDO)',
+            'LOG': 'UNDO',
         }
         
         if create_vsam_ksds(customer, customer_params, verbose):
@@ -218,7 +249,7 @@ def populate_data(config: BuildConfig, start_cust: int = 1, end_cust: int = 1000
 
 
 def verify_data(config: BuildConfig, verbose: bool = False) -> bool:
-    """Verify that data was populated correctly using db2sql"""
+    """Verify that data was populated correctly using db2sql and ZOAU"""
     
     print_banner("Verifying Data Population")
     
@@ -279,7 +310,7 @@ SELECT * FROM CONTROL;"""
         print(f"✗ Error accessing CONTROL table: {e}")
         return False
     
-    # Check CUSTOMER VSAM file
+    # Check CUSTOMER VSAM file using ZOAU
     print_step(3, "Checking CUSTOMER VSAM File")
     
     bank_prefix = config.get('BANK_PREFIX')
