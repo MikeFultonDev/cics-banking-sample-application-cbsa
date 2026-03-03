@@ -40,21 +40,31 @@ def create_vsam_ksds(dataset_name: str, params: dict, verbose: bool = False) -> 
                 print(f"Dataset {dataset_name} already exists, deleting...")
             datasets.delete(dataset_name)
         
-        # Parse space parameters
-        space = params.get('SPACE', 'CYLINDERS(6 6)')
-        if 'CYLINDERS' in space:
-            # Extract primary and secondary from "CYLINDERS(6 6)"
-            import re
-            match = re.search(r'CYLINDERS\((\d+)\s+(\d+)\)', space)
+        # Parse space parameters (now in MB or GB)
+        space = params.get('SPACE', 'MB(5 5)')
+        import re
+        
+        # Support MB(primary secondary) or GB(primary secondary)
+        if 'MB' in space:
+            match = re.search(r'MB\((\d+)\s+(\d+)\)', space)
             if match:
                 primary = int(match.group(1))
                 secondary = int(match.group(2))
             else:
-                primary, secondary = 6, 6
-            space_type = 'CYL'
+                primary, secondary = 5, 5
+            space_type = 'MB'
+        elif 'GB' in space:
+            match = re.search(r'GB\((\d+)\s+(\d+)\)', space)
+            if match:
+                primary = int(match.group(1))
+                secondary = int(match.group(2))
+            else:
+                primary, secondary = 1, 1
+            space_type = 'GB'
         else:
-            primary, secondary = 6, 6
-            space_type = 'CYL'
+            # Default to MB
+            primary, secondary = 5, 5
+            space_type = 'MB'
         
         # Parse keys (e.g., "12 0" means length=12, offset=0)
         keys = params.get('KEYS', '12 0').split()
@@ -120,8 +130,9 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
     if check_vsam_exists(abndfile, verbose):
         print(f"✓ {abndfile} already exists (skipping creation)")
     else:
+        # ABNDFILE: ~5 MB primary, 5 MB secondary (was 6 CYL ~= 4.5 MB)
         abndfile_params = {
-            'SPACE': 'CYLINDERS(6 6)',
+            'SPACE': 'MB(5 5)',
             'KEYS': '12 0',
             'RECORDSIZE': '681 681',
             'SHAREOPTIONS': '2 3',
@@ -144,8 +155,9 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
     if check_vsam_exists(customer, verbose):
         print(f"✓ {customer} already exists (skipping creation)")
     else:
+        # CUSTOMER: 40 MB primary, 40 MB secondary (was 50 CYL ~= 37.5 MB)
         customer_params = {
-            'SPACE': 'CYLINDERS(50 50)',
+            'SPACE': 'MB(40 40)',
             'KEYS': '16 4',
             'RECORDSIZE': '259 259',
             'SHAREOPTIONS': '2 3',
