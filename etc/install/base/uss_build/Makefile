@@ -136,7 +136,7 @@ populate:
 	@echo "=========================================="
 	@echo "Step 5: Populating Data"
 	@echo "=========================================="
-	$(PYTHON) 05_populate_data.py -c $(CONFIG_FILE) $(VERBOSE_FLAG)
+	$(PYTHON) $(mkfile_dir)/05_populate_data.py -c $(BUILD_CONFIG) $(VERBOSE_FLAG)
 
 # Verify installation
 verify:
@@ -144,7 +144,7 @@ verify:
 	@echo "=========================================="
 	@echo "Verifying Installation"
 	@echo "=========================================="
-	$(PYTHON) 05_populate_data.py -c $(CONFIG_FILE) --verify-only $(VERBOSE_FLAG)
+	$(PYTHON) $(mkfile_dir)/05_populate_data.py -c $(BUILD_CONFIG) --verify-only $(VERBOSE_FLAG)
 
 # Clean targets (now using db2.mk targets)
 clean-db2: db2-drop
