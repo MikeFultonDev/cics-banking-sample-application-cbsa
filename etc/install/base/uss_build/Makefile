@@ -42,9 +42,9 @@ include $(mkfile_dir)/compile.mk
 include $(mkfile_dir)/assemble.mk
 include $(mkfile_dir)/db2.mk
 
-.PHONY: all db2bind-clean db2bind-help install setup-db2 compile assemble link db2bind populate verify \
-        setup-db2-only compile-only assemble-only link-only db2bind-only populate-only \
-        clean-db2 clean-vsam clean-all compile-programs compile-maps assemble-maps link-programs \
+.PHONY: all db2bind-clean db2bind-help install setup-db2 assemble link db2bind populate verify \
+        setup-db2-only assemble-only link-only db2bind-only populate-only \
+        clean-db2 clean-vsam clean-all assemble-maps cobol-programs \
         db2bind-packages db2bind-plan db2bind-rebind-plan free-plan db2-help
 
 # Add -v flag if VERBOSE is set
@@ -65,12 +65,10 @@ help:
 	@echo "Available targets:"
 	@echo "  install          - Complete installation (all steps)"
 	@echo "  setup-db2        - Create DB2 database, tables, and indexes"
-	@echo "  compile          - Compile COBOL programs"
-	@echo "  compile-programs - Compile COBOL programs only"
+	@echo "  cobol-programs   - Compile COBOL programs"
 	@echo "  assemble         - Assemble BMS maps"
 	@echo "  assemble-maps    - Assemble BMS maps only"
 	@echo "  link             - Link object files into load modules"
-	@echo "  link-programs    - Link all programs"
 	@echo "  db2bind          - Bind programs to DB2 (packages and plan)"
 	@echo "  db2bind-packages - Bind DB2 packages only"
 	@echo "  db2bind-plan     - Bind DB2 plan only"
@@ -93,25 +91,23 @@ help:
 	@echo "  CONFIG_FILE=<file> - Use alternate configuration file"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make install                    # Full installation"
-	@echo "  make install VERBOSE=1          # Full installation with verbose output"
-	@echo "  make compile                    # Compile all programs"
-	@echo "  make compile-programs           # Compile programs only"
-	@echo "  make assemble                   # Assemble all BMS maps"
-	@echo "  make assemble-maps              # Assemble BMS maps only"
-	@echo "  make link                       # Link all programs"
-	@echo "  make link-programs              # Link all programs"
-	@echo "  make db2bind                    # Bind all packages and plan"
-	@echo "  make db2bind-rebind-plan        # Quick plan rebind"
-	@echo "  make clean-db2 setup-db2        # Recreate DB2 artifacts"
+	@echo "  gmake install                    # Full installation"
+	@echo "  gmake install VERBOSE=1          # Full installation with verbose output"
+	@echo "  gmake cobol-programs             # Compile all programs"
+	@echo "  gmake assemble                   # Assemble all BMS maps"
+	@echo "  gmake assemble-maps              # Assemble BMS maps only"
+	@echo "  gmake link                       # Link all programs"
+	@echo "  gmake db2bind                    # Bind all packages and plan"
+	@echo "  gmake db2bind-rebind-plan        # Quick plan rebind"
+	@echo "  gmake clean-db2 setup-db2        # Recreate DB2 artifacts"
 	@echo ""
 	@echo "For detailed help:"
-	@echo "  make db2bind-help               # Show DB2 binding-specific help"
-	@echo "  make db2-help                   # Show DB2 management help (JCL-based)"
+	@echo "  gmake db2bind-help               # Show DB2 binding-specific help"
+	@echo "  gmake db2-help                   # Show DB2 management help (JCL-based)"
 	@echo ""
 
 # Complete installation
-install: db2-create assemble-maps cobol-programs link-programs db2-bind-packages db2-bind-plan populate verify
+install: db2-create assemble-maps cobol-programs link db2-bind-packages db2-bind-plan populate verify
 	@echo ""
 	@echo "=========================================="
 	@echo "CBSA Installation Complete!"
