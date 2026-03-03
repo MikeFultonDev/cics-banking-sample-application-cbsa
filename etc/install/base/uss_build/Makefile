@@ -42,10 +42,9 @@ include $(mkfile_dir)/compile.mk
 include $(mkfile_dir)/assemble.mk
 include $(mkfile_dir)/db2.mk
 
-.PHONY: all db2bind-clean db2bind-help install setup-db2 assemble link db2bind populate verify \
-        setup-db2-only assemble-only link-only db2bind-only populate-only \
-        clean-db2 clean-vsam clean-all assemble-maps cobol-programs \
-        db2bind-packages db2bind-plan db2bind-rebind-plan free-plan db2-help
+.PHONY: all help install populate verify free-plan db2bind-free-plan \
+        clean-db2 clean-vsam clean-cobol-build clean-assemble-build clean-link-build clean-all \
+        db2bind-clean
 
 # Add -v flag if VERBOSE is set
 ifeq ($(VERBOSE),1)
