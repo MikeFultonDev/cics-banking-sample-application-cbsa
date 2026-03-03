@@ -44,28 +44,38 @@ $(OBJ_DIR) $(LOAD_DIR):
 
 # Compile CICS programs (with CICS and DB2 support)
 # The 'cat' at the end is to ensure that the errors are tagged as IBM-1047
+# DB2 compilation notes:
+# - Remove any existing symbolic link before compilation to ensure clean state
+# - After successful compilation, create symbolic link from program name to .dbrm file
+#   (e.g., CREACC -> CREACC.dbrm) so db2bind can reference members without extension
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cbl
 	@echo "Compiling CICS program: $*"
+	@rm -f $(OBJ_DIR)/$*
 	( \
 		cd $(OBJ_DIR); \
 		$(COBCC) $(COBOL_FLAGS) $(CICS_FLAGS) $(DB2_FLAGS) \
 		-I$(abspath $(COPY_DIR)) -I$(abspath $(BMS_MACRO_DIR)) \
 		-c \
 		$(abspath $<) \
-	)
+	) && ln -sf $*.dbrm $(OBJ_DIR)/$* || true
 	@echo "$* compiled successfully"
 
 # Compile batch programs (no CICS, with DB2 support)
+# DB2 compilation notes:
+# - Remove any existing symbolic link before compilation to ensure clean state
+# - After successful compilation, create symbolic link from program name to .dbrm file
+#   (e.g., BANKDATA -> BANKDATA.dbrm) so db2bind can reference members without extension
 $(OBJ_DIR)/BANKDATA.o: $(SRC_DIR)/BANKDATA.cbl
 	@echo "Compiling batch program: BANKDATA"
+	@rm -f $(OBJ_DIR)/BANKDATA
 	( \
 		cd $(OBJ_DIR); \
 		$(COBCC) $(COBOL_FLAGS) $(DB2_FLAGS) \
 		-I$(abspath $(COPY_DIR)) -I$(abspath $(BMS_MACRO_DIR)) \
 		-c \
 		$(abspath $<) \
-	)		
+	) && ln -sf BANKDATA.dbrm $(OBJ_DIR)/BANKDATA || true
 	@echo "BANKDATA compiled successfully"
 
 $(LOAD_DIR)/%.exe : $(OBJ_DIR)/%.o
@@ -88,17 +98,17 @@ help-cobol:
 	@echo "================================"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make cobol-programs     - Compile all programs"
-	@echo "  make $(LOAD_DIR)/<PROG> - Compile specific program"
-	@echo "  make clean-cobol        - Remove build artifacts"
-	@echo "  make list-programs      - List all programs"
-	@echo "  make status-cobol       - Show build status"
+	@echo "  gmake cobol-programs     - Compile all programs"
+	@echo "  gmake $(LOAD_DIR)/<PROG> - Compile specific program"
+	@echo "  gmake clean-cobol        - Remove build artifacts"
+	@echo "  gmake list-programs      - List all programs"
+	@echo "  gmake status-cobol       - Show build status"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make cobol-programs            # Compile all programs"
-	@echo "  make $(LOAD_DIR)/CREACC        # Compile CREACC only"
-	@echo "  make -j4 cobol-programs        # Compile with 4 parallel jobs"
-	@echo "  make clean-cobol cobol-programs # Clean and rebuild all"
+	@echo "  gmake cobol-programs            # Compile all programs"
+	@echo "  gmake $(LOAD_DIR)/CREACC        # Compile CREACC only"
+	@echo "  gmake -j4 cobol-programs        # Compile with 4 parallel jobs"
+	@echo "  gmake clean-cobol cobol-programs # Clean and rebuild all"
 	@echo ""
 	@echo "Programs:"
 	@echo "  CICS Programs: $(words $(CICS_PROGRAMS))"

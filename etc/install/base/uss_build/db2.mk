@@ -1,5 +1,5 @@
 # CBSA DB2 Management Makefile
-# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd 0.2.0 CLI
+# Manages DB2 database, tables, indexes, packages, and plans using batchtsocmd 0.2.1 CLI
 # Copyright IBM Corp. 2023, 2025
 
 .PHONY: db2-help db2-create db2-drop db2-bind-packages db2-bind-plan db2-bind-all \
@@ -145,7 +145,7 @@ db2-bind-packages:
 	    --isolation UR \
 	    --pklist "NULLID.*" \
 	    --pklist "$${CBSA_PACKAGE}.*" \
-	    --dbrmlib $${DB2_DBRMLIB} \
+	    --library $(OBJ_DIR) \
 	    --steplib $${DB2_HLQ}.SDSNEXIT:$${DB2_HLQ}.SDSNLOAD \
 	    $(VERBOSE_FLAG)
 	@echo "✓ DB2 packages and plan bound successfully"
