@@ -17,6 +17,6 @@ fi
 # errors that are generated will be relative to our root directory
 # and will appear correctly in the IDE.
 #
-gmake --makefile=etc/install/base/uss_build/Makefile db2-bind-packages
+gmake --makefile=etc/install/base/uss_build/Makefile populate
 rc=$?
 exit $rc

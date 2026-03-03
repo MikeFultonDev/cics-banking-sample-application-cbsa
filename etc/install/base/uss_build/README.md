@@ -54,7 +54,7 @@ uss_build/
 ├── assemble.mk                  # BMS map assembly Makefile
 ├── db2.mk                       # DB2 management Makefile
 ├── cbsa_utils.py               # Common utility functions
-├── 05_populate_data.py         # Create VSAM files and populate data
+├── populate_data.py            # Create VSAM files and populate data
 ├── bin/                         # Utility scripts and converters
 ├── db2grant/                    # DB2 grant scripts
 ├── db2sql/                      # DB2 SQL scripts
@@ -369,14 +369,14 @@ python3 04_bind_db2.py -v
 # Rebind existing plan
 python3 04_bind_db2.py --rebind
 ```
+### populate_data.py
 
-### 05_populate_data.py
 
 Creates VSAM files and populates DB2 tables with test data.
 
 **Usage:**
 ```bash
-python3 05_populate_data.py [options]
+python3 populate_data.py [options]
 
 Options:
   -c, --config FILE     Configuration file (default: build.conf)
@@ -393,13 +393,13 @@ Options:
 **Example:**
 ```bash
 # Populate with default data
-python3 05_populate_data.py -v
+python3 populate_data.py -v
 
 # Populate with custom range
-python3 05_populate_data.py --start 1 --end 5000
+python3 populate_data.py --start 1 --end 5000
 
 # Verify data only
-python3 05_populate_data.py --verify-only
+python3 populate_data.py --verify-only
 ```
 
 ## Configuration File
