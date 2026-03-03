@@ -2,19 +2,74 @@
 """
 CBSA Data Population Script
 Equivalent to BANKDATA.jcl - Creates VSAM files and populates DB2 tables
+Rewritten to use batchtsocmd 0.2.1 services (db2sql, db2op, tsocmd, db2run)
 """
 
 import sys
 import os
-import subprocess
-from cbsa_utils import BuildConfig, MVSCommand, print_banner, print_step, check_prerequisites
+from cbsa_utils import BuildConfig, print_banner, print_step, check_prerequisites
+from batchtsocmd import tsocmd, db2sql, db2run
 
 
 def check_vsam_exists(dataset_name: str, verbose: bool = False) -> bool:
-    """Check if a VSAM dataset exists"""
-    cmd = f"LISTCAT ENTRIES('{dataset_name}')"
-    rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
-    return rc == 0
+    """Check if a VSAM dataset exists using tsocmd"""
+    if verbose:
+        print(f"Checking if {dataset_name} exists...")
+    
+    try:
+        result = tsocmd(
+            command=f"LISTCAT ENTRIES('{dataset_name}')",
+            verbose=verbose
+        )
+        return result.rc == 0
+    except Exception as e:
+        if verbose:
+            print(f"Error checking VSAM existence: {e}")
+        return False
+
+
+def create_vsam_ksds(dataset_name: str, params: dict, verbose: bool = False) -> bool:
+    """Create a VSAM KSDS using tsocmd with IDCAMS"""
+    if verbose:
+        print(f"Creating VSAM KSDS: {dataset_name}")
+    
+    # Build IDCAMS DEFINE CLUSTER command
+    idcams_cmd = f"""DEFINE CLUSTER -
+  (NAME('{dataset_name}') -
+   {params.get('SPACE', 'CYLINDERS(6 6)')} -
+   KEYS({params.get('KEYS', '12 0')}) -
+   RECORDSIZE({params.get('RECORDSIZE', '681 681')}) -
+   SHAREOPTIONS({params.get('SHAREOPTIONS', '2 3')}) -
+   {params.get('TYPE', 'INDEXED')} -
+   {params.get('LOG', 'LOG(NONE)')})"""
+    
+    if params.get('REUSE'):
+        idcams_cmd += " -\n  REUSE"
+    
+    if params.get('FREESPACE'):
+        idcams_cmd += f" -\n  FREESPACE({params['FREESPACE']})"
+    
+    try:
+        result = tsocmd(
+            command=idcams_cmd,
+            verbose=verbose
+        )
+        
+        if result.rc == 0:
+            if verbose:
+                print(f"✓ {dataset_name} created successfully")
+            return True
+        else:
+            if verbose:
+                print(f"✗ Failed to create {dataset_name} (RC={result.rc})")
+                if hasattr(result, 'output'):
+                    print(f"Output: {result.output}")
+            return False
+            
+    except Exception as e:
+        if verbose:
+            print(f"Error creating VSAM: {e}")
+        return False
 
 
 def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
@@ -33,17 +88,17 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
         print(f"✓ {abndfile} already exists (skipping creation)")
     else:
         abndfile_params = {
-            'CYL': '6 6',
+            'SPACE': 'CYLINDERS(6 6)',
             'KEYS': '12 0',
             'RECORDSIZE': '681 681',
             'SHAREOPTIONS': '2 3',
-            'INDEXED': '',
-            'LOG': 'NONE',
-            'REUSE': '',
+            'TYPE': 'INDEXED',
+            'LOG': 'LOG(NONE)',
+            'REUSE': True,
             'FREESPACE': '3 3'
         }
         
-        if MVSCommand.allocate_dataset(abndfile, abndfile_params, verbose):
+        if create_vsam_ksds(abndfile, abndfile_params, verbose):
             print(f"✓ {abndfile} created successfully")
         else:
             print(f"✗ Failed to create {abndfile}")
@@ -58,15 +113,15 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
         print(f"✓ {customer} already exists (skipping creation)")
     else:
         customer_params = {
-            'CYL': '50 50',
+            'SPACE': 'CYLINDERS(50 50)',
             'KEYS': '16 4',
             'RECORDSIZE': '259 259',
             'SHAREOPTIONS': '2 3',
-            'INDEXED': '',
-            'LOG': 'UNDO',
+            'TYPE': 'INDEXED',
+            'LOG': 'LOG(UNDO)',
         }
         
-        if MVSCommand.allocate_dataset(customer, customer_params, verbose):
+        if create_vsam_ksds(customer, customer_params, verbose):
             print(f"✓ {customer} created successfully")
         else:
             print(f"✗ Failed to create {customer}")
@@ -76,33 +131,44 @@ def create_vsam_files(config: BuildConfig, verbose: bool = False) -> bool:
 
 
 def check_data_populated(config: BuildConfig, verbose: bool = False) -> bool:
-    """Check if data is already populated in DB2"""
-    from cbsa_utils import DB2Utilities
+    """Check if data is already populated in DB2 using db2sql"""
+    if verbose:
+        print("Checking if data is already populated...")
     
-    db2_utils = DB2Utilities(config)
+    db2_subsystem = config.get('DB2_SYSTEM')
+    db2_hlq = config.get('DB2_HLQ')
     db2_owner = config.get('DB2_OWNER')
+    dsntep_plan = config.get('DB2_DSNTEP_PLAN', 'DSNTEP13')
+    toollib = config.get('DB2_TOOLLIB', f'{db2_hlq}.RUNLIB.LOAD')
+    steplib = f"{db2_hlq}.SDSNEXIT:{db2_hlq}.SDSNLOAD"
     
     # Check if ACCOUNT table has data
-    sql_check = f"""
-SET CURRENT SQLID = '{db2_owner}';
-SELECT COUNT(*) AS CNT FROM ACCOUNT;
-"""
+    sql_check = f"""SET CURRENT SQLID = '{db2_owner}';
+SELECT COUNT(*) AS CNT FROM ACCOUNT;"""
     
     try:
-        result = db2_utils.execute_sql(sql_check, verbose)
-        # execute_sql returns bool, so we check if it succeeded
-        # If table has data and query succeeds, we assume it's populated
-        return result
-    except:
-        pass
-    
-    return False
+        rc = db2sql(
+            sysin_content=sql_check,
+            system=db2_subsystem,
+            plan=dsntep_plan,
+            toollib=toollib,
+            steplib=steplib,
+            verbose=verbose
+        )
+        
+        # If query succeeds (rc=0), assume data exists
+        return rc == 0
+        
+    except Exception as e:
+        if verbose:
+            print(f"Error checking data: {e}")
+        return False
 
 
 def populate_data(config: BuildConfig, start_cust: int = 1, end_cust: int = 10000,
                  increment: int = 1, seed: int = 1000000000000000,
                  verbose: bool = False) -> bool:
-    """Run BANKDATA program to populate data (skip if already populated)"""
+    """Run BANKDATA program to populate data using db2run"""
     
     print_banner("Populating Data")
     
@@ -116,32 +182,26 @@ def populate_data(config: BuildConfig, start_cust: int = 1, end_cust: int = 1000
     print(f"Customer range: {start_cust} to {end_cust} (increment: {increment})")
     print(f"Random seed: {seed}")
     
-    bank_prefix = config.get('BANK_PREFIX')
-    loadlib = config.get('LOADLIB')
-    dbrm_lib = config.get('DBRM')
-    db2_hlq = config.get('DB2_HLQ')
     db2_subsystem = config.get('DB2_SYSTEM')
+    db2_hlq = config.get('DB2_HLQ')
     db2_plan = config.get('CBSA_PLAN')
+    loadlib = config.get('LOADLIB')
+    steplib = f"{db2_hlq}.SDSNEXIT:{db2_hlq}.SDSNLOAD"
     
-    # Build TSO command to run BANKDATA
-    tso_cmd = f"""
-DSN SYSTEM({db2_subsystem})
-RUN PROGRAM(BANKDATA) -
-PLAN({db2_plan}) -
-PARM('{start_cust},{end_cust},{increment},{seed}') -
-LIB('{loadlib}')
-END
-"""
+    # Build program parameters
+    parm = f"{start_cust},{end_cust},{increment},{seed}"
     
-    # Write TSO command to temp file
-    temp_tso = f"/tmp/bankdata_{os.getpid()}.tso"
     try:
-        with open(temp_tso, 'w') as f:
-            f.write(tso_cmd)
-        
-        # Execute via IKJEFT01
-        cmd = f"IKJEFT01 <{temp_tso}"
-        rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
+        # Use db2run to execute BANKDATA program with DB2 plan
+        rc = db2run(
+            program='BANKDATA',
+            system=db2_subsystem,
+            plan=db2_plan,
+            parm=parm,
+            library=loadlib,
+            steplib=steplib,
+            verbose=verbose
+        )
         
         if rc == 0:
             print("✓ BANKDATA executed successfully")
@@ -150,51 +210,73 @@ END
             return True
         else:
             print(f"✗ BANKDATA execution failed (RC={rc})")
-            if stderr:
-                print(f"Error: {stderr}")
             return False
             
-    finally:
-        if os.path.exists(temp_tso):
-            os.remove(temp_tso)
+    except Exception as e:
+        print(f"✗ Error running BANKDATA: {e}")
+        return False
 
 
 def verify_data(config: BuildConfig, verbose: bool = False) -> bool:
-    """Verify that data was populated correctly"""
+    """Verify that data was populated correctly using db2sql"""
     
     print_banner("Verifying Data Population")
     
-    from cbsa_utils import DB2Utilities
-    
-    db2_utils = DB2Utilities(config)
+    db2_subsystem = config.get('DB2_SYSTEM')
+    db2_hlq = config.get('DB2_HLQ')
     db2_owner = config.get('DB2_OWNER')
+    dsntep_plan = config.get('DB2_DSNTEP_PLAN', 'DSNTEP13')
+    toollib = config.get('DB2_TOOLLIB', f'{db2_hlq}.RUNLIB.LOAD')
+    steplib = f"{db2_hlq}.SDSNEXIT:{db2_hlq}.SDSNLOAD"
     
     # Check ACCOUNT table
     print_step(1, "Checking ACCOUNT Table")
     
-    sql_check_account = f"""
-SET CURRENT SQLID = '{db2_owner}';
-SELECT COUNT(*) AS ACCOUNT_COUNT FROM ACCOUNT;
-"""
+    sql_check_account = f"""SET CURRENT SQLID = '{db2_owner}';
+SELECT COUNT(*) AS ACCOUNT_COUNT FROM ACCOUNT;"""
     
-    if db2_utils.execute_sql(sql_check_account, verbose):
-        print("✓ ACCOUNT table accessible")
-    else:
-        print("✗ Could not access ACCOUNT table")
+    try:
+        rc = db2sql(
+            sysin_content=sql_check_account,
+            system=db2_subsystem,
+            plan=dsntep_plan,
+            toollib=toollib,
+            steplib=steplib,
+            verbose=verbose
+        )
+        
+        if rc == 0:
+            print("✓ ACCOUNT table accessible")
+        else:
+            print("✗ Could not access ACCOUNT table")
+            return False
+    except Exception as e:
+        print(f"✗ Error accessing ACCOUNT table: {e}")
         return False
     
     # Check CONTROL table
     print_step(2, "Checking CONTROL Table")
     
-    sql_check_control = f"""
-SET CURRENT SQLID = '{db2_owner}';
-SELECT * FROM CONTROL;
-"""
+    sql_check_control = f"""SET CURRENT SQLID = '{db2_owner}';
+SELECT * FROM CONTROL;"""
     
-    if db2_utils.execute_sql(sql_check_control, verbose):
-        print("✓ CONTROL table accessible")
-    else:
-        print("✗ Could not access CONTROL table")
+    try:
+        rc = db2sql(
+            sysin_content=sql_check_control,
+            system=db2_subsystem,
+            plan=dsntep_plan,
+            toollib=toollib,
+            steplib=steplib,
+            verbose=verbose
+        )
+        
+        if rc == 0:
+            print("✓ CONTROL table accessible")
+        else:
+            print("✗ Could not access CONTROL table")
+            return False
+    except Exception as e:
+        print(f"✗ Error accessing CONTROL table: {e}")
         return False
     
     # Check CUSTOMER VSAM file
@@ -203,11 +285,7 @@ SELECT * FROM CONTROL;
     bank_prefix = config.get('BANK_PREFIX')
     customer_file = f"{bank_prefix}.CUSTOMER"
     
-    # Use IDCAMS LISTCAT to verify
-    cmd = f"LISTCAT ENTRIES('{customer_file}')"
-    rc, stdout, stderr = MVSCommand.run_tso(cmd, verbose)
-    
-    if rc == 0:
+    if check_vsam_exists(customer_file, verbose):
         print(f"✓ CUSTOMER file {customer_file} exists")
     else:
         print(f"✗ CUSTOMER file {customer_file} not found")
