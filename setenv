@@ -13,12 +13,12 @@ else
   if [ -e "${host_config}" ]; then
     source "${host_config}"
   fi
-  # 
-  # Need this to pull in a 'cob2' wrapper program called cobcc and
-  # an ASCII-aware 'ld' wrapper program called ldc 
   #
-  echo "Add ${CBSADIR}/etc/install/base/uss_build/bin to PATH"
-  export PATH="${CBSADIR}/etc/install/base/uss_build/bin:${PATH}"
+  # Need this to pull in a 'cob2' wrapper program called cobcc and
+  # an ASCII-aware 'ld' wrapper program called ldc
+  #
+  echo "Add ${CBSADIR}/etc/install/base/uss_build/scripts to PATH"
+  export PATH="${CBSADIR}/etc/install/base/uss_build/scripts:${PATH}"
 
   # Set up Python environment for USS build system
   echo "Setting up Python environment..."

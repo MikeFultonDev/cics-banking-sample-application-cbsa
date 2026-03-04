@@ -8,7 +8,7 @@
 # are defined in the main Makefile
 
 # Compiler settings
-COBCC := cobcc
+COBCC := $(mkfile_dir)/scripts/cobcc
 COBOL_FLAGS := -comprc_ok=4 -qrent -qlist -qxref -qmap -qapost
 CICS_FLAGS := -qcics -q'COPYLOC(DSN(CICSTS62.CICS.SDFHCOB))' -q'COPYLOC(DSN(CEE.SCEESAMP))'
 DB2_FLAGS := -q"sql('CCSID(1140)')" -q'codepage(1140)' -dbrmlib

@@ -16,4 +16,4 @@
 *.bms zos-working-tree-encoding=IBM-1047
 *.BMS zos-working-tree-encoding=IBM-1047
 
-etc/install/base/uss_build/bin/envsubst binary
+etc/install/base/uss_build/scripts/envsubst binary
