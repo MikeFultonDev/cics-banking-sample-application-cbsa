@@ -10,7 +10,7 @@ CICSCSD_DIR := $(mkfile_dir)/cicscsd
 # build.conf path and envsubst utility for variable substitution
 # Use = (deferred) so $(PYTHON) expands at use time (PYTHON is defined in parent Makefile)
 BUILD_CONF = $(mkfile_dir)/build.conf
-ENVSUBST   = $(PYTHON) $(mkfile_dir)/bin/envsubst
+ENVSUBST   = $(PYTHON) $(mkfile_dir)/scripts/envsubst
 
 # Verbose flag
 VERBOSE_FLAG := $(if $(VERBOSE),-v,)
@@ -33,7 +33,7 @@ cics-help:
 # - Execute DFHCSDUP to install CSD definitions
 cics-create:
 	@echo "Creating CICS datasets and installing resource definitions..."
-	$(PYTHON) $(mkfile_dir)/cics_create.py \
+	$(PYTHON) $(mkfile_dir)/scripts/cics_create.py \
 	    --config $(BUILD_CONF) \
 	    --csd-file $(CICSCSD_DIR)/BANK.csd \
 	    $(VERBOSE_FLAG)

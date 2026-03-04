@@ -53,9 +53,15 @@ uss_build/
 ├── compile.mk                   # COBOL compilation Makefile
 ├── assemble.mk                  # BMS map assembly Makefile
 ├── db2.mk                       # DB2 management Makefile
-├── cbsa_utils.py               # Common utility functions
-├── populate_data.py            # Create VSAM files and populate data
-├── bin/                         # Utility scripts and converters
+├── scripts/                     # Python and bash scripts
+│   ├── cbsa_utils.py           # Common utility functions
+│   ├── cics_create.py          # CICS dataset creation and configuration
+│   ├── populate_data.py        # Create VSAM files and populate data
+│   ├── cobcc                   # COBOL compiler wrapper (bash)
+│   ├── db2subst                # DB2 variable substitution (Python)
+│   ├── envsubst                # Environment variable substitution (Python)
+│   └── ldc                     # Link editor wrapper (bash)
+├── bin/                         # Documentation for converters
 ├── db2grant/                    # DB2 grant scripts
 ├── db2sql/                      # DB2 SQL scripts
 ├── zos_ebcdic_converter/       # Local EBCDIC converter (legacy)
@@ -376,7 +382,7 @@ Creates VSAM files and populates DB2 tables with test data.
 
 **Usage:**
 ```bash
-python3 populate_data.py [options]
+python3 scripts/populate_data.py [options]
 
 Options:
   -c, --config FILE     Configuration file (default: build.conf)
@@ -393,13 +399,13 @@ Options:
 **Example:**
 ```bash
 # Populate with default data
-python3 populate_data.py -v
+python3 scripts/populate_data.py -v
 
 # Populate with custom range
-python3 populate_data.py --start 1 --end 5000
+python3 scripts/populate_data.py --start 1 --end 5000
 
 # Verify data only
-python3 populate_data.py --verify-only
+python3 scripts/populate_data.py --verify-only
 ```
 
 ## Configuration File
