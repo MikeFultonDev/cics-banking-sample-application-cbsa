@@ -37,14 +37,15 @@ BUILD_CONFIG ?= $(mkfile_dir)/build.conf
 PYTHON ?= python3
 VERBOSE ?=
 
-# Include COBOL compilation, BMS assembly, linking, and DB2 makefiles
+# Include COBOL compilation, BMS assembly, linking, DB2, and CICS makefiles
 include $(mkfile_dir)/compile.mk
 include $(mkfile_dir)/assemble.mk
 include $(mkfile_dir)/db2.mk
+include $(mkfile_dir)/cics.mk
 
 .PHONY: all help install populate verify free-plan db2bind-free-plan \
         clean-db2 clean-vsam clean-cobol-build clean-assemble-build clean-link-build clean-all \
-        db2bind-clean
+        db2bind-clean cics-create
 
 # Add -v flag if VERBOSE is set
 ifeq ($(VERBOSE),1)
@@ -81,6 +82,10 @@ help:
 	@echo "  db2-drop         - Drop all DB2 artifacts"
 	@echo "  db2-rebuild      - Drop and recreate all DB2 artifacts"
 	@echo ""
+	@echo "CICS Management (from cics.mk):"
+	@echo "  cics-help        - Show detailed CICS management help"
+	@echo "  cics-create      - Install CICS resource definitions"
+	@echo ""
 	@echo "COBOL Compilation (from compile.mk):"
 	@echo "  help-cobol       - Show COBOL compilation help"
 	@echo "  list-programs    - List all COBOL programs"
@@ -105,7 +110,7 @@ help:
 	@echo ""
 
 # Complete installation
-install: db2-create assemble-maps cobol-programs db2-bind-packages populate verify
+install: db2-create assemble-maps cobol-programs db2-bind-packages populate cics-create verify
 	@echo ""
 	@echo "=========================================="
 	@echo "CBSA Installation Complete!"

@@ -90,7 +90,7 @@ def create_vsam_ksds(dataset_name: str, params: dict, verbose: bool = False) -> 
         # ZOAU datasets.create for VSAM KSDS
         datasets.create(
             name=dataset_name,
-            type='KSDS',
+            dataset_type='KSDS',
             primary_space=primary,
             secondary_space=secondary,
             space_unit=space_type,

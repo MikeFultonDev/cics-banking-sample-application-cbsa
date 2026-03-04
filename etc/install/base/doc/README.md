@@ -278,7 +278,7 @@ these if necessary.
 
 2. Execute job CBSA.JCL.INSTALL(**CBSACSD**) to update the DFHCSD with the
    CBSA definitions and add the CSD GROUP(BANK) into a **LIST** called
-   **CICSTS61** (which is used in the SIT parms for the CICS region).
+   **CICSCBSA** (which is used in the SIT parms for the CICS region).
 
 3. Check job CBSA.JCL.INSTALL(**CICSTS56**), this is an example CICS region.
    You will have you own JCL or PROC to start up your own CICS region. You
@@ -295,7 +295,7 @@ these if necessary.
 
    >DB2CONN=YES
    >
-   >GRPLIST=(XYZLIST,**CICSTS61**) - ensure that you include the CICSTS61
+   >GRPLIST=(XYZLIST,**CICSCBSA**) - ensure that you include the CICSCBSA
    >LIST, created above, into your GRPLIST.
 
 ## Make RACF and USS security changes

@@ -153,7 +153,7 @@ class MVSCommand:
                 create_kwargs['volumes'] = params['VOLUMES']
             
             # Create the dataset
-            datasets.create(dsname, dataset_type, **create_kwargs)
+            datasets.create(dsname, dataset_type=dataset_type, **create_kwargs)
             
             if verbose:
                 print(f"Dataset {dsname} allocated successfully")
@@ -193,7 +193,7 @@ class MVSCommand:
             # Create PDS using ZOAU
             datasets.create(
                 dsname,
-                'PDSE',  # Use PDSE (modern PDS)
+                dataset_type='PDSE',  # Use PDSE (modern PDS)
                 record_format=recfm,
                 record_length=lrecl,
                 block_size=blksize,

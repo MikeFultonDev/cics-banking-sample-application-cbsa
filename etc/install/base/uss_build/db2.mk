@@ -10,10 +10,11 @@
 DB2SQL_DIR := $(mkfile_dir)/db2sql
 DB2GRANT_DIR := $(mkfile_dir)/db2grant
 
-# build.conf path and db2subst utility
+# build.conf path and envsubst utility (db2subst is a backward-compatible wrapper)
 # Use = (deferred) so $(PYTHON) expands at use time (PYTHON is defined in parent Makefile)
 BUILD_CONF = $(mkfile_dir)/build.conf
-DB2SUBST   = $(PYTHON) $(mkfile_dir)/bin/db2subst
+ENVSUBST   = $(PYTHON) $(mkfile_dir)/bin/envsubst
+DB2SUBST   = $(ENVSUBST)
 
 # Verbose flag
 VERBOSE_FLAG := $(if $(VERBOSE),-v,)
