@@ -99,7 +99,7 @@ def create_temp_csd(csd_file: str, config_file: str, verbose: bool = False) -> s
     
     # Get path to envsubst utility
     script_dir = Path(__file__).resolve().parent
-    envsubst_path = script_dir / 'bin' / 'envsubst'
+    envsubst_path = script_dir / 'envsubst'
     
     if not envsubst_path.exists():
         raise FileNotFoundError(f"envsubst utility not found: {envsubst_path}")
@@ -326,8 +326,16 @@ def install_csd_definitions(temp_csd_path: str, config: BuildConfig,
                 print(cbdout_content, file=sys.stderr)
                 print("=" * 70 + "\n", file=sys.stderr)
         
-        if rc == 0:
-            print("✓ CICS CSD definitions installed successfully")
+        # DFHCSDUP return codes:
+        # RC=0: All commands successful
+        # RC=4: Commands successful with warnings (e.g., DELETE of non-existent group)
+        # RC=8+: Commands failed with errors
+        if rc == 0 or rc == 4:
+            if rc == 4:
+                print("✓ CICS CSD definitions installed successfully (with warnings)")
+                print("  Note: Warnings are expected on fresh installs (e.g., DELETE of non-existent groups)")
+            else:
+                print("✓ CICS CSD definitions installed successfully")
             print(f"  Group BANK added to list {cics_region}")
             return True
         else:

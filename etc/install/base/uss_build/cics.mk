@@ -2,7 +2,7 @@
 # Manages CICS dataset allocation and resource definitions using CSD (CICS System Definition)
 # Copyright IBM Corp. 2023, 2025
 
-.PHONY: cics-help cics-create
+.PHONY: cics-help cics-create clean-cics
 
 # CICS CSD directory
 CICSCSD_DIR := $(mkfile_dir)/cicscsd
@@ -22,8 +22,12 @@ cics-help:
 	@echo ""
 	@echo "CICS Resource Definition:"
 	@echo "  cics-create            - Create CICS datasets and install resource definitions (CSD)"
+	@echo "  clean-cics             - Delete CICS CSD dataset (for clean reinstall)"
 	@echo ""
 	@echo "Configuration file: $(BUILD_CONF)"
+	@echo ""
+	@echo "Note: clean-cics is automatically called by 'make clean-all'"
+	@echo "      This ensures subsequent 'make install' will re-allocate and INITIALIZE the CSD"
 	@echo ""
 
 # Create CICS datasets and install resource definitions
@@ -38,5 +42,13 @@ cics-create:
 	    --csd-file $(CICSCSD_DIR)/BANK.csd \
 	    $(VERBOSE_FLAG)
 	@echo ""
+
+# Clean CICS artifacts (delete CSD dataset)
+# This ensures a clean install on subsequent runs by forcing dataset re-allocation and INITIALIZE
+clean-cics:
+	@echo "Cleaning CICS artifacts..."
+	$(PYTHON) $(mkfile_dir)/scripts/cics_clean.py \
+	    --config $(BUILD_CONF) \
+	    $(VERBOSE_FLAG)
 
 # Made with Bob

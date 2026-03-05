@@ -44,7 +44,7 @@ include $(mkfile_dir)/db2.mk
 include $(mkfile_dir)/cics.mk
 
 .PHONY: all help install populate verify free-plan db2bind-free-plan \
-        clean-db2 clean-vsam clean-cobol-build clean-assemble-build clean-link-build clean-all \
+        clean-db2 clean-vsam clean-cics clean-cobol-build clean-assemble-build clean-link-build clean-all \
         db2bind-clean cics-create
 
 # Add -v flag if VERBOSE is set
@@ -72,7 +72,8 @@ help:
 	@echo "  clean-assemble   - Clean BMS assembly artifacts"
 	@echo "  clean-db2        - Drop DB2 artifacts"
 	@echo "  clean-vsam       - Delete VSAM files"
-	@echo "  clean-all        - Clean everything (DB2, VSAM, build artifacts)"
+	@echo "  clean-cics       - Delete CICS CSD dataset"
+	@echo "  clean-all        - Clean everything (DB2, VSAM, CICS, build artifacts)"
 	@echo ""
 	@echo "DB2 Management (from db2.mk):"
 	@echo "  db2-help         - Show detailed DB2 management help"
@@ -165,7 +166,7 @@ clean-assemble-build: clean-assemble
 
 clean-link-build: clean-link
 
-clean-all: clean-db2 clean-vsam clean-cobol clean-assemble clean-link
+clean-all: clean-db2 clean-vsam clean-cics clean-cobol clean-assemble clean-link
 	@echo "Complete cleanup performed"
 	@echo "Note: MVS libraries are not automatically deleted"
 	@echo "      Use TSO DELETE command if needed"

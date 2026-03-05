@@ -17,6 +17,7 @@ fi
 # errors that are generated will be relative to our root directory
 # and will appear correctly in the IDE.
 #
+gmake --makefile=etc/install/base/uss_build/Makefile clean-all
 gmake --makefile=etc/install/base/uss_build/Makefile install
 rc=$?
 exit $rc
